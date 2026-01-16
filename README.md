@@ -4,7 +4,7 @@
 
 <div align="center">
 
-# DbtBuildKit Infrastructure
+# DbtBuildKit
 
 **Build workspaces for dbt projects automatically and entirely on AWS**
 
@@ -79,7 +79,7 @@ DbtBuildKit automatically provisions a complete infrastructure on AWS:
 
 ```mermaid
 graph TB
-    subgraph "DbtBuildKit Infrastructure"
+    subgraph "DbtBuildKit"
         ECR[ECR Repository<br/>Docker Images]
         GitHub[GitHub Connection<br/>CodeConnections]
         
