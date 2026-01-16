@@ -1,0 +1,106 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+      - 'README.md'
+      - 'VERSION'
+      - 'dbt/**'
+      - 'dbtbuildkit/**'
+      - '.terraform-docs.yml'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [build-docs]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Debug - Show changed files
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Changed files:"
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} || echo "No previous commit to compare"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd docs
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate terraform-docs for dbt module
+        uses: terraform-docs/gh-actions@main
+        with:
+          working-dir: ./dbt
+          output-file: README.md
+          output-method: inject
+          git-push: "false"
+          config-file: ../.terraform-docs.yml
+
+      - name: Generate terraform-docs for dbtbuildkit module
+        uses: terraform-docs/gh-actions@main
+        with:
+          working-dir: ./dbtbuildkit
+          output-file: README.md
+          output-method: inject
+          git-push: "false"
+          config-file: ../.terraform-docs.yml
+
+      - name: Install terraform-docs for Sphinx generation
+        run: |
+          curl -sSLo terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.20.0/terraform-docs-v0.20.0-linux-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+          terraform-docs --version
+
+      - name: Generate Terraform documentation for Sphinx
+        run: |
+          cd docs
+          bash scripts/generate_terraform_docs.sh
+
+      - name: Build documentation
+        run: |
+          cd docs
+          make html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

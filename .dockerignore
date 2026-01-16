@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Terraform
+*.tf
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Build artifacts
+_build/
+_builds/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test files
+*.test
+test/
+tests/
+*_test.py
+
+# Examples
+example/
+
+# Pre-commit
+.pre-commit-config.yaml
+
+# Editor config
+.editorconfig
+
+# Other
+*.lock
+.cursor
+.claude

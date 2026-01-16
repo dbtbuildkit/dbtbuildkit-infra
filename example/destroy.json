@@ -1,0 +1,8 @@
+{
+  "environments": {
+    "prd": false,
+    "stg": true,
+    "dev": true
+  },
+  "force_ecr_image_destroy": true
+}

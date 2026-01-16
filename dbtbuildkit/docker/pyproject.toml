@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "dbt-buildkit-scripts"
+version = "0.1.0"
+description = "DBT BuildKit scripts for AWS CodeBuild"
+authors = ["AriHenrique"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.13"
+pytest = "^8.3.5"
+boto3 = "^1.38.44"
+elementary-data = "0.16.1"
+dbt-athena-community = "1.8.2"
+awswrangler = "^3.12.1"
+dbt-redshift = "^1.9.5"
+slack-sdk = "^3.35.0"
+ruamel-yaml = "^0.18.15"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

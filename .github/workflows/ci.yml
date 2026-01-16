@@ -1,0 +1,140 @@
+name: CI - Terraform Plan
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to plan (dev, stg, prd)'
+      aws_region:
+        required: false
+        type: string
+        default: 'us-east-1'
+        description: 'AWS Region'
+      terraform_directory:
+        required: false
+        type: string
+        default: '.'
+        description: 'Directory containing Terraform files'
+      terraform_version:
+        required: false
+        type: string
+        default: '1.6.0'
+        description: 'Terraform version to use'
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+        description: 'AWS Account ID (can be obtained from setup-cicd workflow output)'
+
+env:
+  AWS_REGION: ${{ inputs.aws_region || 'us-east-1' }}
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan - ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get IAM Role ARN
+        id: get-role-arn
+        run: |
+          # Use the same pattern as setup-cicd.yml: github-actions-role-{aws_account_id}-{region}
+          AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          
+          if [ -z "$AWS_ACCOUNT" ]; then
+            echo "❌ Error: AWS_ACCOUNT_ID secret is required"
+            echo ""
+            echo "The role should be created by the setup-cicd workflow."
+            echo "You can get the AWS Account ID from the setup-cicd workflow output."
+            echo ""
+            echo "Solutions:"
+            echo "  1. Run setup-cicd workflow first and extract account ID from role_arn output"
+            echo "  2. Configure AWS_ACCOUNT_ID secret in your repository"
+            exit 1
+          fi
+          
+          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
+          echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
+          echo "Using role ARN: ${ROLE_ARN}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.get-role-arn.outputs.role_arn }}
+          role-session-name: GitHubActions-TerraformPlan
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version || '1.6.0' }}
+          terraform_wrapper: false
+
+      - name: Get S3 bucket name and state key
+        id: get-bucket
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(basename "${{ github.repository }}" 2>/dev/null || echo "${{ github.event.repository.name }}" || echo "terraform")
+          ENV="${{ inputs.environment }}"
+          AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          STATE_KEY="${REPO_OWNER}/${REPO_NAME}/terraform.tfstate"
+          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+          echo "state_key=${STATE_KEY}" >> $GITHUB_OUTPUT
+          echo "S3 Bucket: ${BUCKET_NAME}"
+          echo "State Key: ${STATE_KEY}"
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.terraform_directory || '.' }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ steps.get-bucket.outputs.bucket_name }}" \
+            -backend-config="key=${{ steps.get-bucket.outputs.state_key }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="use_lockfile=true" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        working-directory: ${{ inputs.terraform_directory || '.' }}
+        run: |
+          terraform plan -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+
+      - name: Comment PR
+        # This step will only work if called from a PR context
+        # The calling workflow should control when to comment on PRs
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const plan = fs.readFileSync('${{ inputs.terraform_directory || '.' }}/plan.txt', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## Terraform Plan\n\n```\n' + plan + '\n```'
+              });
+            } catch (error) {
+              console.log('Could not comment on PR:', error.message);
+            }
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}
+          path: ${{ inputs.terraform_directory || '.' }}/tfplan
+          retention-days: 1

@@ -1,0 +1,567 @@
+/* CSS personalizado para o tema DbtBuildKit - Design Moderno */
+
+/* Importar fonte moderna */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variáveis CSS para design system */
+:root {
+    --dbt-primary: #2563eb;
+    --dbt-primary-dark: #1e40af;
+    --dbt-primary-light: #3b82f6;
+    --dbt-secondary: #64748b;
+    --dbt-accent: #0ea5e9;
+    --dbt-success: #10b981;
+    --dbt-warning: #f59e0b;
+    --dbt-error: #ef4444;
+    
+    --dbt-bg-primary: #ffffff;
+    --dbt-bg-secondary: #f8fafc;
+    --dbt-bg-tertiary: #f1f5f9;
+    --dbt-bg-sidebar: #1e293b;
+    --dbt-bg-sidebar-hover: #334155;
+    
+    --dbt-text-primary: #0f172a;
+    --dbt-text-secondary: #475569;
+    --dbt-text-light: #94a3b8;
+    --dbt-text-inverse: #ffffff;
+    
+    --dbt-border: #e2e8f0;
+    --dbt-border-radius: 8px;
+    --dbt-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --dbt-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --dbt-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    
+    --dbt-spacing-xs: 0.25rem;
+    --dbt-spacing-sm: 0.5rem;
+    --dbt-spacing-md: 1rem;
+    --dbt-spacing-lg: 1.5rem;
+    --dbt-spacing-xl: 2rem;
+}
+
+/* Reset e base */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    color: var(--dbt-text-primary);
+    background: var(--dbt-bg-secondary);
+}
+
+/* ============================================
+   SIDEBAR PERSONALIZADA
+   ============================================ */
+
+.wy-side-nav-search {
+    background: linear-gradient(135deg, var(--dbt-primary) 0%, var(--dbt-primary-dark) 100%);
+    padding: var(--dbt-spacing-lg);
+    box-shadow: var(--dbt-shadow-md);
+    border-bottom: 3px solid var(--dbt-primary-light);
+}
+
+.dbtbuildkit-header {
+    width: 100%;
+}
+
+.dbtbuildkit-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--dbt-spacing-md);
+    text-decoration: none;
+    color: var(--dbt-text-inverse);
+    transition: transform 0.2s ease;
+}
+
+.dbtbuildkit-logo:hover {
+    transform: translateX(4px);
+    color: var(--dbt-text-inverse);
+}
+
+.logo-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.logo-subtitle {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.wy-side-nav-search > a {
+    display: none; /* Esconder o link padrão */
+}
+
+/* Menu lateral */
+.wy-menu-vertical {
+    background: var(--dbt-bg-sidebar);
+    padding: var(--dbt-spacing-md) 0;
+}
+
+.wy-menu-vertical a {
+    color: var(--dbt-text-light);
+    padding: var(--dbt-spacing-sm) var(--dbt-spacing-lg);
+    border-radius: 0;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.wy-menu-vertical a:hover {
+    background: var(--dbt-bg-sidebar-hover);
+    color: var(--dbt-text-inverse);
+    border-left-color: var(--dbt-primary-light);
+    padding-left: calc(var(--dbt-spacing-lg) - 3px);
+}
+
+.wy-menu-vertical .current {
+    background: var(--dbt-bg-sidebar-hover);
+    border-left-color: var(--dbt-primary-light);
+}
+
+.wy-menu-vertical .current > a {
+    color: var(--dbt-text-inverse);
+    font-weight: 600;
+}
+
+/* ============================================
+   CONTEÚDO PRINCIPAL
+   ============================================ */
+
+.dbtbuildkit-content-wrapper {
+    background: var(--dbt-bg-primary);
+    min-height: 100vh;
+}
+
+.wy-nav-content-wrap {
+    background: var(--dbt-bg-secondary);
+}
+
+.wy-nav-content {
+    background: var(--dbt-bg-primary);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--dbt-spacing-xl);
+    border-radius: var(--dbt-border-radius);
+    box-shadow: var(--dbt-shadow-sm);
+    margin-top: var(--dbt-spacing-lg);
+    margin-bottom: var(--dbt-spacing-lg);
+}
+
+/* Títulos */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--dbt-text-primary);
+    font-weight: 600;
+    margin-top: var(--dbt-spacing-xl);
+    margin-bottom: var(--dbt-spacing-md);
+    line-height: 1.3;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    border-bottom: 3px solid var(--dbt-primary);
+    padding-bottom: var(--dbt-spacing-md);
+    margin-bottom: var(--dbt-spacing-lg);
+}
+
+h2 {
+    font-size: 2rem;
+    border-bottom: 2px solid var(--dbt-border);
+    padding-bottom: var(--dbt-spacing-sm);
+}
+
+h3 {
+    font-size: 1.5rem;
+    color: var(--dbt-primary);
+}
+
+/* Links */
+a {
+    color: var(--dbt-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    border-bottom: 1px solid transparent;
+}
+
+a:hover {
+    color: var(--dbt-primary-dark);
+    border-bottom-color: var(--dbt-primary);
+}
+
+a.reference {
+    border-bottom: none;
+}
+
+a.reference:hover {
+    border-bottom: 1px solid var(--dbt-primary);
+}
+
+/* Blocos de código */
+.highlight {
+    background: var(--dbt-bg-tertiary);
+    border: 1px solid var(--dbt-border);
+    border-left: 4px solid var(--dbt-primary);
+    border-radius: var(--dbt-border-radius);
+    padding: var(--dbt-spacing-md);
+    margin: var(--dbt-spacing-lg) 0;
+    overflow-x: auto;
+    box-shadow: var(--dbt-shadow-sm);
+}
+
+.highlight pre {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+/* Blocos de aviso/nota */
+.admonition {
+    border: 1px solid var(--dbt-border);
+    border-left: 4px solid var(--dbt-accent);
+    border-radius: var(--dbt-border-radius);
+    padding: var(--dbt-spacing-md);
+    margin: var(--dbt-spacing-lg) 0;
+    background: var(--dbt-bg-secondary);
+    box-shadow: var(--dbt-shadow-sm);
+}
+
+.admonition-title {
+    font-weight: 600;
+    color: var(--dbt-primary);
+    margin-bottom: var(--dbt-spacing-sm);
+}
+
+.admonition.note {
+    border-left-color: var(--dbt-accent);
+}
+
+.admonition.warning {
+    border-left-color: var(--dbt-warning);
+    background: #fffbeb;
+}
+
+.admonition.danger {
+    border-left-color: var(--dbt-error);
+    background: #fef2f2;
+}
+
+/* Tabelas */
+table.docutils {
+    border-collapse: collapse;
+    width: 100%;
+    margin: var(--dbt-spacing-lg) 0;
+    box-shadow: var(--dbt-shadow-sm);
+    border-radius: var(--dbt-border-radius);
+    overflow: hidden;
+}
+
+table.docutils th {
+    background: var(--dbt-primary);
+    color: var(--dbt-text-inverse);
+    padding: var(--dbt-spacing-md);
+    font-weight: 600;
+    text-align: left;
+}
+
+table.docutils td {
+    padding: var(--dbt-spacing-md);
+    border-bottom: 1px solid var(--dbt-border);
+}
+
+table.docutils tr:nth-child(even) {
+    background: var(--dbt-bg-secondary);
+}
+
+table.docutils tr:hover {
+    background: var(--dbt-bg-tertiary);
+}
+
+/* Listas */
+ul, ol {
+    margin: var(--dbt-spacing-md) 0;
+    padding-left: var(--dbt-spacing-xl);
+}
+
+li {
+    margin: var(--dbt-spacing-sm) 0;
+}
+
+/* Parágrafos */
+p {
+    margin: var(--dbt-spacing-md) 0;
+    line-height: 1.8;
+}
+
+/* ============================================
+   FOOTER PERSONALIZADO
+   ============================================ */
+
+.dbtbuildkit-footer {
+    background: var(--dbt-bg-sidebar);
+    color: var(--dbt-text-light);
+    padding: var(--dbt-spacing-xl);
+    margin-top: var(--dbt-spacing-xl);
+    border-top: 3px solid var(--dbt-primary);
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--dbt-spacing-md);
+}
+
+.footer-links {
+    display: flex;
+    gap: var(--dbt-spacing-md);
+    align-items: center;
+}
+
+.footer-links a {
+    color: var(--dbt-text-light);
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: var(--dbt-text-inverse);
+}
+
+.footer-links span {
+    color: var(--dbt-text-light);
+    opacity: 0.5;
+}
+
+/* ============================================
+   RESPONSIVIDADE
+   ============================================ */
+
+@media screen and (max-width: 768px) {
+    .wy-nav-content {
+        padding: var(--dbt-spacing-md);
+        margin: var(--dbt-spacing-md);
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* ============================================
+   MELHORIAS VISUAIS
+   ============================================ */
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dbt-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dbt-secondary);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--dbt-primary);
+}
+
+/* Botões de navegação */
+.wy-breadcrumbs {
+    background: var(--dbt-bg-secondary);
+    padding: var(--dbt-spacing-md);
+    border-radius: var(--dbt-border-radius);
+    margin-bottom: var(--dbt-spacing-lg);
+}
+
+/* Cards para seções */
+.section {
+    margin: var(--dbt-spacing-xl) 0;
+    padding: var(--dbt-spacing-lg);
+    background: var(--dbt-bg-primary);
+    border-radius: var(--dbt-border-radius);
+    box-shadow: var(--dbt-shadow-sm);
+    border: 1px solid var(--dbt-border);
+}
+
+/* Melhorias no formulário de busca */
+.wy-form input[type="text"] {
+    border: 2px solid var(--dbt-border);
+    border-radius: var(--dbt-border-radius);
+    padding: var(--dbt-spacing-sm) var(--dbt-spacing-md);
+    transition: all 0.2s ease;
+    background: var(--dbt-bg-primary);
+    color: var(--dbt-text-primary);
+}
+
+.wy-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--dbt-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background: var(--dbt-bg-primary);
+}
+
+/* ============================================
+   TRANSFORMAÇÕES VISUAIS ADICIONAIS
+   ============================================ */
+
+/* Container principal com card effect */
+.wy-nav-content {
+    background: var(--dbt-bg-primary);
+    border-radius: 12px;
+    box-shadow: var(--dbt-shadow-lg);
+    padding: var(--dbt-spacing-xl) !important;
+    margin: var(--dbt-spacing-xl) auto !important;
+    border: 1px solid var(--dbt-border);
+}
+
+/* Sidebar com visual moderno */
+.wy-nav-side {
+    box-shadow: var(--dbt-shadow-lg);
+    border-right: 2px solid var(--dbt-border);
+}
+
+/* Melhorias nos blocos de conteúdo */
+.rst-content .section {
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Cards para listas de definição */
+dl {
+    background: var(--dbt-bg-secondary);
+    padding: var(--dbt-spacing-md);
+    border-radius: var(--dbt-border-radius);
+    border-left: 4px solid var(--dbt-primary);
+    margin: var(--dbt-spacing-md) 0;
+}
+
+dt {
+    font-weight: 600;
+    color: var(--dbt-primary);
+    margin-top: var(--dbt-spacing-md);
+}
+
+dt:first-child {
+    margin-top: 0;
+}
+
+dd {
+    margin-left: var(--dbt-spacing-lg);
+    color: var(--dbt-text-secondary);
+    margin-bottom: var(--dbt-spacing-sm);
+}
+
+/* Blocos de citação */
+blockquote {
+    border-left: 4px solid var(--dbt-primary);
+    background: var(--dbt-bg-secondary);
+    padding: var(--dbt-spacing-md);
+    margin: var(--dbt-spacing-lg) 0;
+    border-radius: var(--dbt-border-radius);
+    font-style: italic;
+    color: var(--dbt-text-secondary);
+}
+
+/* Ícones e badges */
+.headerlink {
+    color: var(--dbt-text-light) !important;
+    opacity: 0;
+    transition: all 0.2s ease;
+    margin-left: var(--dbt-spacing-sm);
+}
+
+h1:hover .headerlink,
+h2:hover .headerlink,
+h3:hover .headerlink,
+h4:hover .headerlink,
+h5:hover .headerlink,
+h6:hover .headerlink {
+    opacity: 1;
+    color: var(--dbt-primary) !important;
+}
+
+/* Melhorias na navegação mobile */
+.wy-nav-top {
+    background: linear-gradient(135deg, var(--dbt-primary) 0%, var(--dbt-primary-dark) 100%);
+    box-shadow: var(--dbt-shadow-md);
+}
+
+.wy-nav-top i {
+    color: var(--dbt-text-inverse);
+}
+
+/* Estilo para código inline */
+code {
+    background: var(--dbt-bg-tertiary);
+    color: var(--dbt-primary-dark);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+    border: 1px solid var(--dbt-border);
+}
+
+/* Melhorias em listas de navegação */
+.toctree-wrapper {
+    margin: var(--dbt-spacing-md) 0;
+}
+
+.toctree-l1 > a {
+    font-weight: 600;
+    color: var(--dbt-text-inverse) !important;
+    padding: var(--dbt-spacing-sm) var(--dbt-spacing-lg);
+}
+
+.toctree-l2 > a,
+.toctree-l3 > a,
+.toctree-l4 > a {
+    padding-left: calc(var(--dbt-spacing-lg) + var(--dbt-spacing-md));
+    font-size: 0.95em;
+}
+
+/* Efeitos de hover suaves */
+.wy-menu-vertical a,
+.wy-menu-vertical .current > a {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Gradiente sutil no fundo */
+body {
+    background: linear-gradient(135deg, var(--dbt-bg-secondary) 0%, #f1f5f9 100%);
+    min-height: 100vh;
+}
+
+/* Espaçamento melhorado entre elementos */
+.rst-content > * {
+    margin-bottom: var(--dbt-spacing-md);
+}
+
+.rst-content > *:last-child {
+    margin-bottom: 0;
+}

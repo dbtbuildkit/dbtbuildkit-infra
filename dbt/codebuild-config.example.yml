@@ -1,0 +1,242 @@
+# Exemplo de arquivo de configuração para projetos DBT
+# Copie este arquivo para codebuild-config.yml e ajuste conforme necessário
+
+codebuild:
+  # Projeto básico - execução manual
+  - name: projeto-basico
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    ecr_repository: "dev-dbtbuildkit"  # Nome do repositório ECR (sem o prefixo de conta/região)
+    ecr_image_tag: "latest"  # Tag da imagem (opcional, padrão: latest)
+    commands:
+      - dbt run
+      - dbt test
+
+  # Projeto com agendamento
+  - name: projeto-agendado
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt run --select tag:daily
+      - dbt test
+    schedule: "cron(0 2 * * ? *)"  # Diariamente às 2h UTC
+    timeout: 120  # 2 horas
+
+  # Projeto completo com todas as funcionalidades
+  - name: projeto-completo
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    ecr_repository: "dev-dbtbuildkit"  # Nome do repositório ECR que contém a imagem Docker
+    ecr_image_tag: "v1.2.3"  # Tag específica da imagem (opcional)
+    commands:
+      - dbt run
+      - dbt test
+      - dbt docs generate
+    
+    # Configurações de infraestrutura
+    timeout: 180
+    compute_type: BUILD_GENERAL1_MEDIUM
+    
+    # Bucket S3 para artefatos (opcional)
+    # Se não especificado, usa o padrão: s3://artifacts-bucket/dbt-artifacts/project={nome_do_projeto}
+    # Se especificado, os artefatos serão enviados para: s3://{s3_artifacts_bucket}/dbt-artifacts/project={nome_do_projeto}
+    s3_artifacts_bucket: "meu-bucket-artifacts"  # Apenas o nome do bucket (sem s3://)
+    
+    # Agendamento
+    schedule: "cron(0 3 * * ? *)"  # Diariamente às 3h UTC
+    
+    # Notificações Slack
+    slack-notification:
+      active: true
+      channel: "#data-alerts"
+      secret_name: "slack-token"  # Nome do secret no AWS Secrets Manager (padrão: "slack-token")
+    
+    # Notificações Microsoft Teams
+    teams-notification:
+      active: true
+      secret_name: "teams-webhook"  # Nome do secret no AWS Secrets Manager (padrão: "teams-webhook")
+      # webhook_url: "https://outlook.office.com/webhook/..."  # Alternativa: URL direta (opcional)
+    
+    # Notificações Discord
+    discord-notification:
+      active: true
+      secret_name: "discord-webhook"  # Nome do secret no AWS Secrets Manager (padrão: "discord-webhook")
+      # webhook_url: "https://discord.com/api/webhooks/..."  # Alternativa: URL direta (opcional)
+    
+    # Elementary Data
+    elementary:
+      active: true
+      channel: "#elementary-data"
+      description: "Projeto principal de transformação de dados"
+      gitpages: true
+    
+    # Gerenciamento de Incidentes
+    incident-manager:
+      active: true
+      impact: 1  # 1=Crítico, 2=Alto, 3=Médio, 4=Baixo
+      incident-response-plan: "data-response-plan"
+    
+    # Variáveis de ambiente customizadas
+    environment_variables:
+      CUSTOM_VAR: "valor-customizado"
+      LOG_LEVEL: "INFO"
+    
+    # Secrets do AWS Secrets Manager
+    secrets_manager_variables:
+      - DB_PASSWORD: "arn:aws:secretsmanager:us-east-1:123456789012:secret:db-password"
+      - API_KEY: "arn:aws:secretsmanager:us-east-1:123456789012:secret:api-key"
+    
+    # Configuração VPC (opcional - para execução em rede privada)
+    vpc_config:
+      vpc_id: "vpc-1234567890abcdef0"
+      subnets:
+        - "subnet-1234567890abcdef0"
+        - "subnet-0987654321fedcba0"
+      security_group_ids:
+        - "sg-1234567890abcdef0"
+    
+    # Tabelas críticas para monitoramento
+    critical_tables:
+      - "public.vendas"
+      - "public.clientes"
+      - "analytics.fato_vendas"
+    
+    # Tabelas não críticas
+    not_critical_tables:
+      - "staging.teste"
+      - "temp.tabela_temporaria"
+    
+    # Notificações automáticas
+    auto-notifications:
+      - "build-success"
+      - "build-failure"
+      - "test-failure"
+    
+    # UTC offset (para ajustar horários locais)
+    utc: -3  # UTC-3 (Brasil)
+
+  # Projeto para BigQuery
+  - name: projeto-bigquery
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt-bigquery
+    engine: bigquery
+    ecr_repository: "dev-dbtbuildkit"  # Repositório ECR com imagem Docker
+    commands:
+      - dbt run
+      - dbt test
+    schedule: "rate(12 hours)"  # A cada 12 horas
+
+  # Projeto para Snowflake
+  - name: projeto-snowflake
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt-snowflake
+    engine: snowflake
+    ecr_repository: "dev-dbtbuildkit"  # Repositório ECR com imagem Docker
+    commands:
+      - dbt run --select tag:incremental
+      - dbt test
+    schedule: "cron(0 */6 * * ? *)"  # A cada 6 horas
+
+  # Projeto desativado (não será criado)
+  - name: projeto-desativado
+    active: false
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt run
+
+  # Projeto apenas com Elementary (sem Slack)
+  - name: projeto-elementary-only
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt run
+      - dbt test
+    elementary:
+      active: true
+      channel: "#elementary-data"
+      description: "Monitoramento via Elementary"
+      gitpages: false
+
+  # Projeto apenas com Slack (sem Elementary)
+  - name: projeto-slack-only
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt run
+    slack-notification:
+      active: true
+      channel: "#data-team"
+      secret_name: "slack-token"
+  
+  # Projeto com múltiplos canais de notificação
+  - name: projeto-multiplos-canais
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt run
+      - dbt test
+    slack-notification:
+      active: true
+      channel: "#data-alerts"
+      secret_name: "slack-token"
+    teams-notification:
+      active: true
+      secret_name: "teams-webhook"
+      # webhook_url: "https://outlook.office.com/webhook/..."  # Alternativa: URL direta
+    discord-notification:
+      active: true
+      secret_name: "discord-webhook"
+      # webhook_url: "https://discord.com/api/webhooks/..."  # Alternativa: URL direta
+
+# Notas:
+# - Campos obrigatórios: name, active, org, repo, engine, commands
+# - Todos os outros campos são opcionais
+# - Projetos com active: false são ignorados
+# - Use schedule para agendamento automático (formato CloudWatch Events)
+# - Use vpc_config para execução em rede privada
+# - Secrets devem estar no formato ARN completo do Secrets Manager
+#
+# Configuração de Imagem Docker (ECR):
+# - ecr_repository: Nome do repositório ECR que contém a imagem Docker (ex: "dev-dbtbuildkit")
+#   * Se não especificado, usa o padrão: {env}-{ecr_dbt} (definido na variável do módulo)
+#   * O nome deve ser apenas o nome do repositório, sem prefixo de conta/região
+# - ecr_image_tag: Tag da imagem Docker a ser usada (opcional, padrão: "latest")
+#   * Se não especificado, usa o valor da variável ecr_image_tag do módulo
+# - A URI completa da imagem será construída automaticamente como:
+#   {account-id}.dkr.ecr.{region}.amazonaws.com/{ecr_repository}:{ecr_image_tag}
+#
+# Configuração de Notificações:
+# - Slack: Requer secret_name (nome do secret no AWS Secrets Manager) e channel
+# - Teams: Requer secret_name OU webhook_url (URL direta do webhook)
+# - Discord: Requer secret_name OU webhook_url (URL direta do webhook)
+# - Os secrets no AWS Secrets Manager devem conter:
+#   * Slack: {"token": "xoxb-..."} ou {"url": "https://hooks.slack.com/..."}
+#   * Teams: {"webhook_url": "https://outlook.office.com/webhook/..."} ou URL direta como string
+#   * Discord: {"webhook_url": "https://discord.com/api/webhooks/..."} ou URL direta como string
+# - A região AWS é definida pela variável AWS_DEFAULT_REGION (padrão: us-east-1)
+#
+# Configuração de Notificações:
+# - Slack: Requer secret_name (nome do secret no AWS Secrets Manager) e channel
+# - Teams: Requer secret_name OU webhook_url (URL direta do webhook)
+# - Discord: Requer secret_name OU webhook_url (URL direta do webhook)
+# - Os secrets no AWS Secrets Manager devem conter:
+#   * Slack: {"token": "xoxb-..."} ou {"url": "https://hooks.slack.com/..."}
+#   * Teams: {"webhook_url": "https://outlook.office.com/webhook/..."} ou URL direta como string
+#   * Discord: {"webhook_url": "https://discord.com/api/webhooks/..."} ou URL direta como string
+# - A região AWS é definida pela variável AWS_DEFAULT_REGION (padrão: us-east-1)

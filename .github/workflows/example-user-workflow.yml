@@ -1,0 +1,142 @@
+# =============================================================================
+# USAGE EXAMPLE - DbtBuildKit CI/CD
+# =============================================================================
+# 
+# This is a complete example of how to use DbtBuildKit workflows
+# in your GitHub repository.
+#
+# INSTRUCTIONS:
+# 1. Copy this file to .github/workflows/cicd.yml in your repository
+# 2. Replace OWNER/REPO with the DbtBuildKit repository
+#    Example: dbtbuildkit/dbtbuildkit-infra
+# 3. Configure the required secrets (see below)
+# 4. Adjust the triggers (on:) according to your needs
+#
+# REQUIRED SECRETS:
+# - AWS_ACCOUNT_ID: AWS Account ID (REQUIRED for all workflows)
+# - AWS_ACCESS_KEY_ID: AWS Access Key ID (REQUIRED for setup-cicd.yml)
+# - AWS_SECRET_ACCESS_KEY: AWS Secret Access Key (REQUIRED for setup-cicd.yml)
+#
+# OPTIONAL SECRETS (for setup-cicd.yml):
+# - AWS_POLICY_ARN: ARN of custom IAM policy to attach to the created role (optional, uses default policy if not provided)
+# - AWS_SECRET_TOKEN: AWS Session Token (optional, required for SSO/temporary credentials)
+#
+# NOTE: 
+# - AWS_ACCOUNT_ID is REQUIRED for all workflows (setup-cicd.yml, ci.yml, and cd.yml)
+# - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are REQUIRED for setup-cicd.yml
+# - AWS_SECRET_TOKEN is OPTIONAL for setup-cicd.yml (required when using SSO/temporary credentials)
+# - AWS_POLICY_ARN is OPTIONAL for setup-cicd.yml
+#   - If not provided, a default policy optimized for dbt projects CI/CD will be created
+#   - If provided, the custom policy will be attached to the role
+# - The AWS_ACCOUNT_ID secret is used directly to construct the IAM role ARN
+#   following the pattern: github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}
+#
+# NOTE: Linter errors about "Unable to find reusable workflow" are
+# normal and will be resolved when you replace OWNER/REPO with the
+# actual DbtBuildKit repository.
+#
+# =============================================================================
+
+name: CI/CD Pipeline - DbtBuildKit
+
+on:
+  # Runs on push to main branches
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  
+  # Runs on Pull Requests
+  pull_request:
+    branches:
+      - main
+      - master
+  
+  # Allows manual execution with parameters
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment (dev, stg, prd)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - stg
+          - prd
+      aws_region:
+        description: 'AWS Region'
+        required: false
+        type: string
+        default: 'us-east-1'
+
+# =============================================================================
+# JOB 1: Setup CI/CD Infrastructure
+# =============================================================================
+# This job checks if the base infrastructure (IAM Role, S3 Bucket) exists.
+# If it doesn't exist, it creates it automatically.
+#
+# Resources created:
+# - IAM Role: github-actions-role-{aws_account_id}-{region}
+# - IAM Policy: github-actions-policy-{aws_account_id}-{region}
+# - S3 Bucket: {env}-{region}-{aws_account_id}--tfstates
+# - OIDC Provider: token.actions.githubusercontent.com
+# =============================================================================
+
+jobs:
+  setup-cicd:
+    name: Setup CI/CD Infrastructure
+    uses: OWNER/REPO/.github/workflows/setup-cicd.yml@main
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_POLICY_ARN: ${{ secrets.AWS_POLICY_ARN }}
+
+# =============================================================================
+# JOB 2: CI - Terraform Plan
+# =============================================================================
+# This job runs 'terraform plan' and comments the result on Pull Requests.
+# It depends on the 'setup-cicd' job.
+#
+# The AWS_ACCOUNT_ID secret is used directly to construct the IAM role ARN
+# following the pattern: github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}
+# =============================================================================
+
+  ci:
+    name: Terraform Plan
+    needs: setup-cicd
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    uses: OWNER/REPO/.github/workflows/ci.yml@main
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+      terraform_directory: '.' # Where your Terraform files are (e.g., 'terraform/')
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+# =============================================================================
+# JOB 3: CD - Terraform Apply
+# =============================================================================
+# This job runs 'terraform apply' to provision or update the infrastructure.
+# It depends on the 'setup-cicd' and 'ci' jobs.
+#
+# The AWS_ACCOUNT_ID secret is used directly to construct the IAM role ARN
+# following the pattern: github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}
+# =============================================================================
+
+  cd:
+    name: Terraform Apply
+    needs: [setup-cicd, ci]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: OWNER/REPO/.github/workflows/cd.yml@main
+    with:
+      environment: ${{ github.event.inputs.environment || 'dev' }}
+      aws_region: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+      terraform_directory: '.' # Where your Terraform files are (e.g., 'terraform/')
+      auto_approve: true # Set to true for automatic approval in CD
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}

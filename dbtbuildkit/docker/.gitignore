@@ -1,0 +1,11 @@
+# Build artifacts (não devem ser commitados)
+build/
+dist/
+*.spec.bak
+
+# Poetry lock file (opcional, pode ser commitado)
+# poetry.lock
+
+# Arquivos temporários
+*.tmp
+*.log

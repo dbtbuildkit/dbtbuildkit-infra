@@ -1,0 +1,706 @@
+name: Setup CI/CD Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to setup (dev, stg, prd)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - stg
+          - prd
+      aws_region:
+        description: 'AWS Region'
+        required: false
+        default: 'us-east-1'
+        type: string
+      all_environments:
+        description: 'Setup all environments?'
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to setup (dev, stg, prd)'
+      aws_region:
+        required: false
+        type: string
+        default: 'us-east-1'
+        description: 'AWS Region'
+    outputs:
+      role_arn:
+        description: 'ARN of the created IAM role'
+        value: ${{ jobs.setup-infrastructure.outputs.role_arn }}
+    secrets:
+      AWS_ACCOUNT_ID:
+        required: true
+        description: 'AWS Account ID (REQUIRED)'
+      AWS_ACCESS_KEY_ID:
+        required: true
+        description: 'AWS Access Key ID (REQUIRED)'
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+        description: 'AWS Secret Access Key (REQUIRED)'
+      AWS_SECRET_TOKEN:
+        required: false
+        description: 'AWS Session Token (optional, required for SSO/temporary credentials)'
+      AWS_POLICY_ARN:
+        required: false
+        description: 'ARN of custom IAM policy to attach to the created role (optional, uses default policy if not provided)'
+
+env:
+  AWS_REGION: ${{ inputs.aws_region || 'us-east-1' }}
+  TF_VERSION: 1.6.0
+
+jobs:
+  setup-infrastructure:
+    outputs:
+      role_arn: ${{ steps.get_role_arn.outputs.role_arn }}
+    name: Setup CI/CD Infrastructure
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SECRET_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate required secrets
+        run: |
+          MISSING_SECRETS=()
+          
+          if [ -z "${{ secrets.AWS_ACCOUNT_ID }}" ]; then
+            MISSING_SECRETS+=("AWS_ACCOUNT_ID")
+          fi
+          
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            MISSING_SECRETS+=("AWS_ACCESS_KEY_ID")
+          fi
+          
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            MISSING_SECRETS+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "Error: The following required secrets are missing:"
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "  - ${secret}"
+            done
+            echo ""
+            echo "Please configure all required secrets in your repository:"
+            echo "  - AWS_ACCOUNT_ID: AWS Account ID"
+            echo "  - AWS_ACCESS_KEY_ID: AWS Access Key ID"
+            echo "  - AWS_SECRET_ACCESS_KEY: AWS Secret Access Key"
+            echo ""
+            echo "Optional:"
+            echo "  - AWS_POLICY_ARN: ARN of custom IAM policy (if not provided, a default policy will be created)"
+            echo "  - AWS_SECRET_TOKEN: AWS Session Token (for SSO/temporary credentials)"
+            exit 1
+          fi
+          
+          if [ -n "${{ secrets.AWS_POLICY_ARN }}" ]; then
+            echo "Using custom IAM policy: ${{ secrets.AWS_POLICY_ARN }}"
+          else
+            echo "No custom policy provided, will create default policy optimized for the project"
+          fi
+          
+          if [ -n "${{ secrets.AWS_SECRET_TOKEN }}" ]; then
+            echo "Using AWS credentials with session token (SSO/temporary credentials)"
+          else
+            echo "Using AWS Access Key authentication"
+          fi
+          
+          echo "All required secrets are configured"
+
+      - name: Check AWS credentials
+        run: |
+          if ! aws sts get-caller-identity &>/dev/null; then
+            echo "Error: Could not authenticate with AWS"
+            echo ""
+            echo "Please verify:"
+            echo "  1. AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct"
+            echo "  2. If using SSO/temporary credentials, AWS_SECRET_TOKEN is configured"
+            echo "  3. Credentials have not expired"
+            exit 1
+          fi
+          echo "AWS authentication successful"
+          aws sts get-caller-identity
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Setup AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws --version
+
+      - name: Get repository information
+        id: repo-info
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+          CREATION_DATE=$(git log --reverse --format=%aI 2>/dev/null | head -n 1 || date -Iseconds)
+          UPDATED_BY=$(git log -1 --format='%aN' 2>/dev/null || echo "${{ github.actor }}")
+          REPO_NAME=$(basename "${{ github.repository }}" 2>/dev/null || echo "${{ github.event.repository.name }}" || echo "terraform")
+          PROJECT_NAME="${REPO_NAME}"
+          
+          # Verify that the AWS Account ID from secret matches the authenticated account
+          AUTHENTICATED_ACCOUNT=$(aws sts get-caller-identity --query "Account" --output text)
+          if [ "$AWS_ACCOUNT" != "$AUTHENTICATED_ACCOUNT" ]; then
+            echo "Warning: AWS_ACCOUNT_ID secret (${AWS_ACCOUNT}) does not match authenticated account (${AUTHENTICATED_ACCOUNT})"
+            echo "Using AWS_ACCOUNT_ID from secret: ${AWS_ACCOUNT}"
+          fi
+          
+          echo "repo_owner=${REPO_OWNER}" >> $GITHUB_OUTPUT
+          echo "aws_account=${AWS_ACCOUNT}" >> $GITHUB_OUTPUT
+          echo "creation_date=${CREATION_DATE}" >> $GITHUB_OUTPUT
+          echo "updated_by=${UPDATED_BY}" >> $GITHUB_OUTPUT
+          echo "project_name=${PROJECT_NAME}" >> $GITHUB_OUTPUT
+          
+          echo "Repository Owner: ${REPO_OWNER}"
+          echo "AWS Account: ${AWS_ACCOUNT}"
+          echo "Project: ${PROJECT_NAME}"
+
+
+      - name: Create Terraform configuration
+        run: |
+          mkdir -p .github/cicd-setup
+          cd .github/cicd-setup
+          
+          ENV="${{ inputs.environment || 'dev' }}"
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          # Create provider.tf
+          cat > provider.tf << EOF
+          terraform {
+            required_providers {
+              aws = {
+                source  = "hashicorp/aws"
+                version = "~> 5.0"
+              }
+            }
+          }
+          
+          provider "aws" {
+            region = var.aws_region
+          }
+          EOF
+          
+          # Create backend.tf
+          cat > backend.tf << EOF
+          terraform {
+            backend "s3" {
+              bucket       = "${BUCKET_NAME}"
+              key          = "cicd-setup/terraform.tfstate"
+              region       = "${AWS_REGION}"
+              use_lockfile = true
+              encrypt      = true
+            }
+          }
+          EOF
+          
+          # Create variables.tf
+          cat > variables.tf << 'EOF'
+          variable "project" {
+            description = "Project name"
+            type        = string
+          }
+          
+          variable "env" {
+            description = "Environment name"
+            type        = string
+          }
+          
+          variable "aws_region" {
+            description = "AWS region"
+            type        = string
+          }
+          
+          variable "github_acc" {
+            description = "GitHub user/organization"
+            type        = string
+          }
+          
+          variable "aws_account" {
+            description = "AWS Account ID"
+            type        = string
+          }
+          
+          variable "creation_date" {
+            description = "Repository creation date"
+            type        = string
+          }
+          
+          variable "updated_by" {
+            description = "Repository creator"
+            type        = string
+          }
+          
+          variable "bucket_name" {
+            description = "S3 bucket name for remote backend"
+            type        = string
+          }
+          
+          locals {
+            common_tags = {
+              env              = var.env
+              project          = var.project
+              updated_by       = var.updated_by
+              updated_date     = timestamp()
+              creation_date    = var.creation_date
+              data_sensitivity = "Confidential"
+              purpose          = "CI-CD"
+              department       = "Data"
+              cost_center      = "Data"
+              version          = "v1.0"
+            }
+          }
+          EOF
+          
+          # Create main.tf
+          cat > main.tf << 'EOF'
+          resource "aws_s3_bucket" "s3_buckets" {
+            bucket = lower(var.bucket_name)
+            tags   = local.common_tags
+          }
+          
+          resource "aws_s3_bucket_versioning" "versioning" {
+            bucket   = aws_s3_bucket.s3_buckets.id
+            versioning_configuration {
+              status = "Enabled"
+            }
+          }
+          
+          resource "aws_s3_bucket_lifecycle_configuration" "lifecycle_landing" {
+            bucket = aws_s3_bucket.s3_buckets.bucket
+            transition_default_minimum_object_size = "all_storage_classes_128K"
+            
+            rule {
+              id     = "LimitVersionsTo20"
+              status = "Enabled"
+              
+              filter {
+                prefix = ""
+              }
+              
+              noncurrent_version_expiration {
+                noncurrent_days           = 1
+                newer_noncurrent_versions = 20
+              }
+            }
+          }
+          
+          resource "aws_iam_openid_connect_provider" "github" {
+            url = "https://token.actions.githubusercontent.com"
+            tags = local.common_tags
+            client_id_list = [
+              "sts.amazonaws.com",
+            ]
+            
+            thumbprint_list = [
+              "6938fd4d98bab03faadb97b34396831e3780aea1",
+            ]
+          }
+          
+          resource "aws_iam_role" "github_actions_role" {
+            name = "github-actions-role-${var.aws_account}-${var.aws_region}"
+            tags = local.common_tags
+            assume_role_policy = jsonencode({
+              Version = "2012-10-17",
+              Statement = [
+                {
+                  Effect = "Allow",
+                  Principal = {
+                    Federated = aws_iam_openid_connect_provider.github.arn
+                  },
+                  Action = "sts:AssumeRoleWithWebIdentity",
+                  Condition = {
+                    StringEquals = {
+                      "token.actions.githubusercontent.com:aud" : ["sts.amazonaws.com"]
+                    }
+                    StringLike = {
+                      "token.actions.githubusercontent.com:sub" : ["repo:${var.github_acc}/*"]
+                    }
+                  }
+                }
+              ]
+            })
+          }
+          EOF
+          
+          # Create iam.tf
+          cat > iam.tf << 'EOF'
+          # Variable for custom IAM policy ARN (optional)
+          variable "custom_policy_arn" {
+            description = "ARN of a custom IAM policy to attach to the role (optional)"
+            type        = string
+            default     = ""
+          }
+          
+          # Default policy for dbt projects CI/CD
+          resource "aws_iam_policy" "github_actions_policy" {
+            name        = "github-actions-policy-${var.aws_account}-${var.aws_region}"
+            description = "Default policy for GitHub Actions to manage dbt projects CI/CD infrastructure"
+            tags = local.common_tags
+            policy = jsonencode({
+              Version = "2012-10-17",
+              Statement = [
+                {
+                  Sid    = "TerraformStateManagement"
+                  Effect = "Allow"
+                  Action = [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:ListBucket",
+                    "s3:DeleteObject",
+                    "s3:GetBucketVersioning",
+                    "s3:PutBucketVersioning"
+                  ]
+                  Resource = [
+                    "arn:aws:s3:::${var.bucket_name}",
+                    "arn:aws:s3:::${var.bucket_name}/*"
+                  ]
+                },
+                {
+                  Sid    = "CodeBuildManagement"
+                  Effect = "Allow"
+                  Action = [
+                    "codebuild:*"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "CodeConnectionsManagement"
+                  Effect = "Allow"
+                  Action = [
+                    "codeconnections:*"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "ECRManagement"
+                  Effect = "Allow"
+                  Action = [
+                    "ecr:*"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "IAMManagement"
+                  Effect = "Allow"
+                  Action = [
+                    "iam:GetRole",
+                    "iam:GetPolicy",
+                    "iam:GetPolicyVersion",
+                    "iam:ListRolePolicies",
+                    "iam:ListAttachedRolePolicies",
+                    "iam:CreateRole",
+                    "iam:UpdateRole",
+                    "iam:AttachRolePolicy",
+                    "iam:DetachRolePolicy",
+                    "iam:PutRolePolicy",
+                    "iam:DeleteRolePolicy",
+                    "iam:CreatePolicy",
+                    "iam:TagRole",
+                    "iam:TagPolicy"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "CloudWatchLogs"
+                  Effect = "Allow"
+                  Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "SecretsManager"
+                  Effect = "Allow"
+                  Action = [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "CloudWatchEvents"
+                  Effect = "Allow"
+                  Action = [
+                    "events:*"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "DataEngines"
+                  Effect = "Allow"
+                  Action = [
+                    "athena:*",
+                    "glue:*",
+                    "redshift:*",
+                    "redshift-data:*",
+                    "lakeformation:*"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "S3Artifacts"
+                  Effect = "Allow"
+                  Action = [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:ListBucket"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "S3StateLocking"
+                  Effect = "Allow"
+                  Action = [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject"
+                  ]
+                  Resource = [
+                    "arn:aws:s3:::${var.bucket_name}/*.tflock"
+                  ]
+                },
+                {
+                  Sid    = "STS"
+                  Effect = "Allow"
+                  Action = [
+                    "sts:GetCallerIdentity",
+                    "sts:AssumeRole"
+                  ]
+                  Resource = "*"
+                },
+                {
+                  Sid    = "SSM"
+                  Effect = "Allow"
+                  Action = [
+                    "ssm:*",
+                    "ssm-incidents:*",
+                    "ssm-contacts:*"
+                  ]
+                  Resource = "*"
+                }
+              ]
+            })
+          }
+          
+          # Attach default policy
+          resource "aws_iam_role_policy_attachment" "attach_default_policy" {
+            role       = aws_iam_role.github_actions_role.name
+            policy_arn = aws_iam_policy.github_actions_policy.arn
+          }
+          
+          # Attach custom policy if provided
+          resource "aws_iam_role_policy_attachment" "attach_custom_policy" {
+            count      = var.custom_policy_arn != "" ? 1 : 0
+            role       = aws_iam_role.github_actions_role.name
+            policy_arn = var.custom_policy_arn
+          }
+          EOF
+          
+          # Create terraform.tfvars
+          CUSTOM_POLICY_ARN="${{ secrets.AWS_POLICY_ARN || '' }}"
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          cat > terraform.tfvars << EOF
+          project       = "${{ steps.repo-info.outputs.project_name }}"
+          env           = "${ENV}"
+          aws_region    = "${AWS_REGION}"
+          github_acc    = "${REPO_OWNER}"
+          aws_account   = "${AWS_ACCOUNT}"
+          creation_date = "${{ steps.repo-info.outputs.creation_date }}"
+          updated_by    = "${{ steps.repo-info.outputs.updated_by }}"
+          bucket_name   = "${BUCKET_NAME}"
+          custom_policy_arn = "${CUSTOM_POLICY_ARN}"
+          EOF
+          
+          if [ -n "$CUSTOM_POLICY_ARN" ]; then
+            echo "Using custom IAM policy: ${CUSTOM_POLICY_ARN}"
+          else
+            echo "No custom policy provided, will create default policy optimized for dbt projects CI/CD"
+          fi
+          
+          echo "Terraform configuration created"
+          echo "Bucket Name: ${BUCKET_NAME}"
+          
+          # Create .gitignore to prevent committing Terraform files
+          cat > .gitignore << 'EOF'
+          *.tfstate
+          *.tfstate.*
+          *.tfplan
+          .terraform/
+          .terraform.lock.hcl
+          terraform.tfvars
+          EOF
+
+      - name: Create S3 bucket if not exists
+        run: |
+          cd .github/cicd-setup
+          ENV="${{ inputs.environment || 'dev' }}"
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          if ! aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" &>/dev/null; then
+            echo "Creating S3 bucket: $BUCKET_NAME"
+            if [ "$AWS_REGION" = "us-east-1" ]; then
+              aws s3api create-bucket \
+                --bucket "$BUCKET_NAME" \
+                --region "$AWS_REGION"
+            else
+              aws s3api create-bucket \
+                --bucket "$BUCKET_NAME" \
+                --region "$AWS_REGION" \
+                --create-bucket-configuration LocationConstraint="$AWS_REGION"
+            fi
+            
+            # Enable versioning
+            aws s3api put-bucket-versioning \
+              --bucket "$BUCKET_NAME" \
+              --versioning-configuration Status=Enabled
+          else
+            echo "S3 bucket $BUCKET_NAME already exists"
+          fi
+
+      - name: Check if infrastructure already exists
+        id: check-existing
+        run: |
+          cd .github/cicd-setup
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ENV="${{ inputs.environment || 'dev' }}"
+          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          ROLE_EXISTS=false
+          BUCKET_EXISTS=false
+          
+          if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
+            ROLE_EXISTS=true
+            echo "✅ IAM Role '$ROLE_NAME' already exists"
+          fi
+          
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" &>/dev/null 2>&1; then
+            BUCKET_EXISTS=true
+            echo "✅ S3 Bucket '$BUCKET_NAME' already exists"
+          fi
+          
+          if [ "$ROLE_EXISTS" = "true" ] && [ "$BUCKET_EXISTS" = "true" ]; then
+            echo "✅ Infrastructure already exists"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "📦 Infrastructure needs to be created"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Initialize and apply Terraform
+        if: steps.check-existing.outputs.exists != 'true'
+        working-directory: .github/cicd-setup
+        run: |
+          terraform init
+          
+          # Check if OIDC provider exists
+          OIDC_ARN="arn:aws:iam::${{ steps.repo-info.outputs.aws_account }}:oidc-provider/token.actions.githubusercontent.com"
+          if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" &>/dev/null; then
+            echo "OIDC Provider exists, importing..."
+            terraform import aws_iam_openid_connect_provider.github "$OIDC_ARN" || true
+          fi
+          
+          # Check if IAM role exists
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
+            echo "IAM Role exists, importing..."
+            terraform import aws_iam_role.github_actions_role "$ROLE_NAME" || true
+          fi
+          
+          # Check if IAM policy exists (default policy)
+          POLICY_NAME="github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
+          POLICY_ARN="arn:aws:iam::${{ steps.repo-info.outputs.aws_account }}:policy/${POLICY_NAME}"
+          if aws iam get-policy --policy-arn "$POLICY_ARN" &>/dev/null; then
+            echo "IAM Policy exists, importing..."
+            terraform import aws_iam_policy.github_actions_policy "$POLICY_ARN" || true
+          fi
+          
+          terraform plan -out=tfplan
+          terraform apply tfplan
+
+      - name: Get created IAM Role ARN
+        id: get_role_arn
+        run: |
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
+          echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
+          echo "role_name=${ROLE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Verify setup
+        run: |
+          if [ "${{ steps.check-existing.outputs.exists }}" = "true" ]; then
+            echo "CI/CD infrastructure already exists"
+            echo ""
+            echo "The following resources are available:"
+            echo "  - S3 Bucket for Terraform state"
+            echo "  - IAM Role: ${{ steps.get_role_arn.outputs.role_name }}"
+            if [ -n "${{ secrets.AWS_POLICY_ARN }}" ]; then
+              echo "  - IAM Policy attached: ${{ secrets.AWS_POLICY_ARN }}"
+            else
+              echo "  - IAM Policy: github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
+            fi
+            echo "  - OIDC Provider for GitHub"
+          else
+          echo "CI/CD infrastructure setup completed!"
+          echo ""
+          echo "The following resources have been created:"
+          echo "  - S3 Bucket for Terraform state"
+          echo "  - IAM Role: ${{ steps.get_role_arn.outputs.role_name }}"
+          if [ -n "${{ secrets.AWS_POLICY_ARN }}" ]; then
+            echo "  - IAM Policy attached: ${{ secrets.AWS_POLICY_ARN }}"
+          else
+            echo "  - IAM Policy: github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
+          fi
+          echo "  - OIDC Provider for GitHub"
+          fi
+          echo ""
+          echo "Next steps:"
+          echo "  1. Use the reusable workflows in your CI/CD pipelines"
+          echo "  2. If you used temporary credentials (SSO), update AWS_SECRET_TOKEN when it expires"
+          echo ""
+          echo "IAM Role ARN: ${{ steps.get_role_arn.outputs.role_arn }}"

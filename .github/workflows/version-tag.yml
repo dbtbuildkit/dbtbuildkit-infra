@@ -1,0 +1,149 @@
+name: Create Version Tag
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VERSION'
+      - '.github/workflows/version-tag.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necessário para verificar tags existentes
+
+      - name: Read VERSION file
+        id: version
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "❌ Arquivo VERSION não encontrado!"
+            exit 1
+          fi
+          
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          
+          # Validar formato da versão (semver: x.y.z)
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "❌ Formato de versão inválido: $VERSION"
+            echo "Formato esperado: MAJOR.MINOR.PATCH (ex: 1.2.3)"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Versão lida: $VERSION"
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag v${VERSION} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag v${VERSION} does not exist, will create it"
+          fi
+
+      - name: Create and push tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+          COMMIT_SHA="${{ github.sha }}"
+          
+          # Configurar Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Criar a tag anotada apontando para o commit atual
+          MESSAGE=$(cat <<EOF
+          Release version ${VERSION}
+          
+          Criado automaticamente pelo GitHub Actions.
+          Commit: ${COMMIT_SHA}
+          Data: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          EOF
+          )
+          git tag -a "$TAG_NAME" -m "$MESSAGE"
+          
+          # Fazer push da tag
+          git push origin "$TAG_NAME"
+          
+          echo "✅ Tag $TAG_NAME criada e enviada com sucesso!"
+          echo "Tag aponta para o commit: $COMMIT_SHA"
+
+      - name: Check if release exists
+        if: steps.check-tag.outputs.exists == 'false'
+        id: check-release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+          
+          # Verificar se a release já existe usando GitHub API
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME}")
+          
+          if [ "$RESPONSE" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release $TAG_NAME already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Release $TAG_NAME does not exist, will create it"
+          fi
+
+      - name: Prepare release notes
+        if: steps.check-tag.outputs.exists == 'false' && steps.check-release.outputs.exists == 'false'
+        id: release-notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          COMMIT_SHA="${{ github.sha }}"
+          DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          
+          cat > /tmp/release_notes.md <<EOF
+          ## Release ${VERSION}
+          
+          Release version ${VERSION} criada automaticamente pelo GitHub Actions.
+          
+          **Commit:** ${COMMIT_SHA}
+          **Data:** ${DATE}
+          
+          ### Mudanças
+          
+          Esta release foi criada automaticamente quando o arquivo VERSION foi atualizado.
+          EOF
+          
+          echo "notes_path=/tmp/release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check-tag.outputs.exists == 'false' && steps.check-release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: ${{ steps.release-notes.outputs.notes_path }}
+          target_commitish: ${{ github.sha }}
+          draft: false
+          prerelease: false
+
+      - name: Tag already exists
+        if: steps.check-tag.outputs.exists == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "ℹ️  Tag v${VERSION} já existe, pulando criação"
+
+      - name: Release already exists
+        if: steps.check-tag.outputs.exists == 'false' && steps.check-release.outputs.exists == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "ℹ️  Release v${VERSION} já existe, pulando criação"
