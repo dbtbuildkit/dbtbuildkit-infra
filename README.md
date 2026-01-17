@@ -77,45 +77,7 @@
 
 DbtBuildKit automatically provisions a complete infrastructure on AWS:
 
-```mermaid
-graph TB
-    subgraph "DbtBuildKit"
-        ECR[ECR Repository<br/>Docker Images]
-        GitHub[GitHub Connection<br/>CodeConnections]
-        
-        ECR <--> GitHub
-        
-        subgraph "CodeBuild Projects"
-            Proj1[Project 1<br/>dbt]
-            Proj2[Project 2<br/>dbt]
-            ProjN[Project N<br/>dbt]
-        end
-        
-        ECR --> Proj1
-        ECR --> Proj2
-        ECR --> ProjN
-        GitHub --> Proj1
-        GitHub --> Proj2
-        GitHub --> ProjN
-        
-        CloudWatch[CloudWatch Events<br/>Scheduling]
-        S3[S3 Buckets<br/>Artifacts]
-        
-        CloudWatch --> Proj1
-        CloudWatch --> Proj2
-        CloudWatch --> ProjN
-        
-        Proj1 --> S3
-        Proj2 --> S3
-        ProjN --> S3
-        
-        Notifications[Notifications<br/>Slack/Teams/Discord]
-        
-        Proj1 --> Notifications
-        Proj2 --> Notifications
-        ProjN --> Notifications
-    end
-```
+![arq](docs/_static/dbtbuildkit.png)
 
 ### Execution Flow
 

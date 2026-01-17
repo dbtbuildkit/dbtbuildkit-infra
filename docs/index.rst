@@ -88,6 +88,12 @@ Documentation Contents
 Architecture Overview
 ---------------------
 
+.. figure:: _static/dbtbuildkit.png
+   :alt: DbtBuildKit Architecture
+   :align: center
+   
+   Architecture diagram showing the complete DbtBuildKit infrastructure on AWS
+
 DbtBuildKit automatically provisions a complete infrastructure on AWS with the following components:
 
 **Core Infrastructure:**
