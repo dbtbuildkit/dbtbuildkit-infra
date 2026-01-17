@@ -314,8 +314,6 @@ Now that you have the basics set up, explore:
 * :doc:`examples` - More configuration examples
 * :doc:`modules/dbt` - Complete DBT module documentation
 * :doc:`modules/dbtbuildkit` - Complete DbtBuildKit module documentation
-* :doc:`variables` - All available variables
-* :doc:`outputs` - Module outputs reference
 * :doc:`cicd` - Advanced CI/CD configuration
 
 Common Issues

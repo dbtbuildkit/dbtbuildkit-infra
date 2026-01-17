@@ -406,5 +406,3 @@ Navigation
 * :doc:`examples` - Usage Examples
 * :doc:`modules/dbt` - DBT Module
 * :doc:`modules/dbtbuildkit` - DbtBuildKit Module
-* :doc:`variables` - Variables
-* :doc:`outputs` - Outputs

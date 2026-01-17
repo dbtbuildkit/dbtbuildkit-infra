@@ -77,7 +77,7 @@
 
 DbtBuildKit automatically provisions a complete infrastructure on AWS:
 
-![arq](docs/_static/dbtbuildkit.png)
+![arq](docs/_static/dbtbuildkit.svg)
 
 ### Execution Flow
 

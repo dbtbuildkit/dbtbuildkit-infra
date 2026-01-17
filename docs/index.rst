@@ -88,7 +88,7 @@ Documentation Contents
 Architecture Overview
 ---------------------
 
-.. figure:: _static/dbtbuildkit.png
+.. figure:: _static/dbtbuildkit.svg
    :alt: DbtBuildKit Architecture
    :align: center
    
