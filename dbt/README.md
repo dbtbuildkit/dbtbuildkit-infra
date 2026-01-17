@@ -9,7 +9,7 @@ Este módulo Terraform cria uma infraestrutura completa na AWS para executar pro
 - ✅ Agendamento de execuções via CloudWatch Events
 - ✅ Integração nativa com GitHub ou SSH
 - ✅ Suporte a múltiplos engines (Redshift, BigQuery, Snowflake, etc.)
-- ✅ Notificações via Slack e Elementary
+- ✅ Notificações via Slack, Teams, Discord e SNS
 - ✅ Gerenciamento de incidentes via AWS Systems Manager
 - ✅ Permissões IAM configuráveis
 - ✅ Suporte a VPC para execução em rede privada
@@ -103,6 +103,11 @@ codebuild:
       active: true
       secret_name: "discord-webhook"  # Nome do secret no AWS Secrets Manager (padrão: vazio)
       # webhook_url: "https://discord.com/api/webhooks/..."  # Alternativa: URL direta (opcional)
+    
+    # Notificações SNS
+    sns-notification:
+      active: true
+      topic_arn: "arn:aws:sns:us-east-1:123456789012:dbt-notifications"  # ARN do tópico SNS
     
     # Elementary
     elementary:

@@ -97,6 +97,13 @@ locals {
       ]
     },
 
+    {
+      Effect = "Allow"
+      Action = [
+        "sns:Publish"
+      ]
+      Resource = "*"
+    },
 
     {
       Effect = "Allow"
@@ -210,7 +217,8 @@ locals {
       "ssm-contacts:*",
       "ec2:*",
       "codeconnections:*",
-      "dynamodb:*"
+      "dynamodb:*",
+      "sns:*"
     ]
     Resource = "*"
   }
@@ -551,6 +559,16 @@ resource "aws_codebuild_project" "dbt_projects" {
     }
 
     environment_variable {
+      name  = "SNS_NOTIFICATION"
+      value = tostring(try(each.value["sns-notification"].active, try(each.value["sns-notification"], false), false))
+    }
+
+    environment_variable {
+      name  = "SNS_TOPIC_ARN"
+      value = try(each.value["sns-notification"].topic_arn, null)
+    }
+
+    environment_variable {
       name  = "ELEMENTARY_CHANNEL"
       value = try(each.value.elementary.channel, null)
     }
@@ -674,6 +692,7 @@ resource "aws_codebuild_project" "dbt_projects" {
       slack_notification        = try(each.value["slack-notification"].active, each.value["slack-notification"], false)
       teams_notification        = try(each.value["teams-notification"].active, try(each.value["teams-notification"], false), false)
       discord_notification      = try(each.value["discord-notification"].active, try(each.value["discord-notification"], false), false)
+      sns_notification          = try(each.value["sns-notification"].active, try(each.value["sns-notification"], false), false)
       incident_manager          = lookup(each.value, "incident-manager", {})
       slack_channel             = try(each.value["slack-notification"].channel, "")
       description_elementary    = try(each.value.elementary.description, "")

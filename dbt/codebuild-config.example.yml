@@ -69,6 +69,11 @@ codebuild:
       secret_name: "discord-webhook"  # Nome do secret no AWS Secrets Manager (padrão: "discord-webhook")
       # webhook_url: "https://discord.com/api/webhooks/..."  # Alternativa: URL direta (opcional)
     
+    # Notificações SNS
+    sns-notification:
+      active: true
+      topic_arn: "arn:aws:sns:us-east-1:123456789012:dbt-notifications"  # ARN do tópico SNS
+    
     # Elementary Data
     elementary:
       active: true
@@ -203,6 +208,9 @@ codebuild:
       active: true
       secret_name: "discord-webhook"
       # webhook_url: "https://discord.com/api/webhooks/..."  # Alternativa: URL direta
+    sns-notification:
+      active: true
+      topic_arn: "arn:aws:sns:us-east-1:123456789012:dbt-notifications"
 
 # Notas:
 # - Campos obrigatórios: name, active, org, repo, engine, commands
@@ -225,16 +233,7 @@ codebuild:
 # - Slack: Requer secret_name (nome do secret no AWS Secrets Manager) e channel
 # - Teams: Requer secret_name OU webhook_url (URL direta do webhook)
 # - Discord: Requer secret_name OU webhook_url (URL direta do webhook)
-# - Os secrets no AWS Secrets Manager devem conter:
-#   * Slack: {"token": "xoxb-..."} ou {"url": "https://hooks.slack.com/..."}
-#   * Teams: {"webhook_url": "https://outlook.office.com/webhook/..."} ou URL direta como string
-#   * Discord: {"webhook_url": "https://discord.com/api/webhooks/..."} ou URL direta como string
-# - A região AWS é definida pela variável AWS_DEFAULT_REGION (padrão: us-east-1)
-#
-# Configuração de Notificações:
-# - Slack: Requer secret_name (nome do secret no AWS Secrets Manager) e channel
-# - Teams: Requer secret_name OU webhook_url (URL direta do webhook)
-# - Discord: Requer secret_name OU webhook_url (URL direta do webhook)
+# - SNS: Requer topic_arn (ARN completo do tópico SNS)
 # - Os secrets no AWS Secrets Manager devem conter:
 #   * Slack: {"token": "xoxb-..."} ou {"url": "https://hooks.slack.com/..."}
 #   * Teams: {"webhook_url": "https://outlook.office.com/webhook/..."} ou URL direta como string
