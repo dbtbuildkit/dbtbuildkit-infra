@@ -44,6 +44,9 @@ jobs:
       role_session_name: GitHubActions-TerraformPlan
     secrets:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+    permissions:
+      id-token: write
+      contents: read
 
   terraform-plan:
     name: Terraform Plan - ${{ inputs.environment }}
