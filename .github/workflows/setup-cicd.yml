@@ -170,7 +170,8 @@ jobs:
       - name: Get repository information
         id: repo-info
         run: |
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          # Keep original case for REPO_OWNER (GitHub org names are case-sensitive for OIDC tokens)
+          REPO_OWNER="${{ github.repository_owner }}"
           AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
           CREATION_DATE=$(git log --reverse --format=%aI 2>/dev/null | head -n 1 || date -Iseconds)
           UPDATED_BY=$(git log -1 --format='%aN' 2>/dev/null || echo "${{ github.actor }}")
@@ -575,6 +576,12 @@ jobs:
           CUSTOM_POLICY_ARN="${{ secrets.AWS_POLICY_ARN || '' }}"
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           REPO_OWNER="${{ steps.repo-info.outputs.repo_owner }}"
+          
+          echo "=========================================="
+          echo "GitHub Organization (case-sensitive): ${REPO_OWNER}"
+          echo "Trust policy will use: repo:${REPO_OWNER}/*:*"
+          echo "=========================================="
+          
           cat > terraform.tfvars << EOF
           project       = "${{ steps.repo-info.outputs.project_name }}"
           env           = "${ENV}"

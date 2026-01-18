@@ -117,7 +117,8 @@ jobs:
       - name: Get S3 bucket name and state key
         id: get-bucket
         run: |
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          # Keep original case for REPO_OWNER (GitHub org names are case-sensitive for OIDC tokens)
+          REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME=$(basename "${{ github.repository }}" 2>/dev/null || echo "${{ github.event.repository.name }}" || echo "terraform")
           ENV="${{ inputs.environment }}"
           AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
