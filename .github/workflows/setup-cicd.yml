@@ -634,6 +634,26 @@ jobs:
         run: |
           terraform init
           
+          # Get bucket name
+          ENV="${{ inputs.environment || 'dev' }}"
+          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          AWS_REGION="${{ env.AWS_REGION }}"
+          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          # Check if S3 bucket exists and import it
+          if aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" &>/dev/null; then
+            echo "S3 Bucket exists, importing..."
+            terraform import aws_s3_bucket.s3_buckets "$BUCKET_NAME" || true
+            
+            # Import bucket versioning if enabled
+            VERSIONING_STATUS=$(aws s3api get-bucket-versioning --bucket "$BUCKET_NAME" --query 'Status' --output text 2>/dev/null || echo "")
+            if [ "$VERSIONING_STATUS" = "Enabled" ]; then
+              echo "S3 Bucket versioning is enabled, importing..."
+              terraform import aws_s3_bucket_versioning.versioning "$BUCKET_NAME" || true
+            fi
+          fi
+          
           # Check if OIDC provider exists
           OIDC_ARN="arn:aws:iam::${{ steps.repo-info.outputs.aws_account }}:oidc-provider/token.actions.githubusercontent.com"
           if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" &>/dev/null; then
@@ -642,8 +662,6 @@ jobs:
           fi
           
           # Check if IAM role exists
-          AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
-          AWS_REGION="${{ env.AWS_REGION }}"
           ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
           if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
             echo "IAM Role exists, importing..."
