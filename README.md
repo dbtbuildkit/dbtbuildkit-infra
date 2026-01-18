@@ -458,6 +458,7 @@ Automatically checks if CI/CD infrastructure exists and creates it if needed.
 **Inputs:**
 - `environment` (optional): Environment (dev, stg, prd) - default: 'dev'
 - `aws_region` (optional): AWS region - default: 'us-east-1'
+- `resource_name_prefix` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
 - `AWS_ACCOUNT_ID` (required): AWS Account ID
@@ -475,9 +476,10 @@ Runs `terraform plan` for review.
 - `aws_region` (optional): AWS region - default: 'us-east-1'
 - `terraform_directory` (optional): Terraform directory - default: '.'
 - `terraform_version` (optional): Terraform version - default: '1.10.0'
+- `resource_name_prefix` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
-- `AWS_ACCOUNT_ID` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: `github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`)
+- `AWS_ACCOUNT_ID` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: `{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`)
 
 #### `cd.yml` - Terraform Apply
 
@@ -489,9 +491,10 @@ Runs `terraform apply` to provision infrastructure.
 - `terraform_directory` (optional): Terraform directory - default: '.'
 - `terraform_version` (optional): Terraform version - default: '1.10.0'
 - `auto_approve` (optional): Auto approve apply - default: false
+- `resource_name_prefix` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
-- `AWS_ACCOUNT_ID` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: `github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`)
+- `AWS_ACCOUNT_ID` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: `{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`)
 
 ### Documentation
 

@@ -113,6 +113,7 @@ Automatically checks if CI/CD infrastructure exists and creates it if needed.
 
 - ``environment`` (optional): Environment (dev, stg, prd) - default: 'dev'
 - ``aws_region`` (optional): AWS region - default: 'us-east-1'
+- ``resource_name_prefix`` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
 
@@ -128,10 +129,12 @@ Automatically checks if CI/CD infrastructure exists and creates it if needed.
 
 **What it creates:**
 
-- S3 bucket for Terraform state (with versioning enabled) following the pattern: ``{environment}-{region}-{aws_account_id}--tfstates``
-- IAM Role for GitHub Actions following the pattern: ``github-actions-role-{aws_account_id}-{region}``
-- IAM Policy (default policy optimized for dbt projects CI/CD, or custom policy if ``AWS_POLICY_ARN`` is provided)
+- S3 bucket for Terraform state (with versioning enabled) following the pattern: ``{prefix}-{environment}-{region}-{aws_account_id}--tfstates`` (max 63 chars)
+- IAM Role for GitHub Actions following the pattern: ``{prefix}-github-actions-role-{aws_account_id}-{region}`` (max 64 chars)
+- IAM Policy (default policy optimized for dbt projects CI/CD, or custom policy if ``AWS_POLICY_ARN`` is provided) following the pattern: ``{prefix}-github-actions-policy-{aws_account_id}-{region}`` (max 128 chars)
 - OIDC Provider for GitHub authentication
+
+**Note:** The default prefix is ``dbt-kit``. You can customize it using the ``resource_name_prefix`` input to avoid conflicts with existing resources.
 
 ci.yml
 ~~~~~~
@@ -144,10 +147,11 @@ Runs ``terraform plan`` for review. Can comment on Pull Requests with the plan o
 - ``aws_region`` (optional): AWS region - default: 'us-east-1'
 - ``terraform_directory`` (optional): Directory containing Terraform files - default: '.'
 - ``terraform_version`` (optional): Terraform version - default: '1.10.0'
+- ``resource_name_prefix`` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
 
-- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
+- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
 
 **Features:**
 
@@ -167,10 +171,11 @@ Runs ``terraform apply`` to provision or update infrastructure.
 - ``terraform_directory`` (optional): Directory containing Terraform files - default: '.'
 - ``terraform_version`` (optional): Terraform version - default: '1.10.0'
 - ``auto_approve`` (optional): Auto approve apply - default: false
+- ``resource_name_prefix`` (optional): Prefix for resource names (bucket, role, policy) to avoid conflicts - default: 'dbt-kit'
 
 **Secrets:**
 
-- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
+- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
 
 **Features:**
 
@@ -188,11 +193,13 @@ The workflows automatically configure Terraform state management:
 - **Encryption**: State files are encrypted at rest
 - **Versioning**: S3 bucket versioning is enabled for state recovery
 
-The bucket name follows the pattern: ``{environment}-{region}-{aws_account_id}--tfstates``
+The bucket name follows the pattern: ``{prefix}-{environment}-{region}-{aws_account_id}--tfstates`` (max 63 characters)
 
-State key follows the pattern: ``{repo-owner}/{repo-name}/terraform.tfstate``
+State key follows the pattern: ``org={repo-owner}/repo={repo-name}/terraform.tfstate``
 
-The IAM role ARN is constructed using: ``arn:aws:iam::{aws_account_id}:role/github-actions-role-{aws_account_id}-{region}``
+The IAM role ARN is constructed using: ``arn:aws:iam::{aws_account_id}:role/{prefix}-github-actions-role-{aws_account_id}-{region}`` (max 64 characters for role name)
+
+**Note:** Resource names are automatically truncated to respect AWS limits. The default prefix is ``dbt-kit``, but you can customize it using the ``resource_name_prefix`` input in all workflows.
 
 Multi-Environment Support
 --------------------------

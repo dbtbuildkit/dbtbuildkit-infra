@@ -27,6 +27,11 @@ on:
         type: boolean
         default: false
         description: 'Auto approve terraform apply'
+      resource_name_prefix:
+        required: false
+        type: string
+        default: 'dbt-kit'
+        description: 'Prefix for resource names (bucket, role, policy). Default: dbt-kit'
     secrets:
       AWS_ACCOUNT_ID:
         required: true
@@ -50,9 +55,10 @@ jobs:
       - name: Get IAM Role ARN
         id: get-role-arn
         run: |
-          # Use the same pattern as setup-cicd.yml: github-actions-role-{aws_account_id}-{region}
+          # Use the same pattern as setup-cicd.yml: {prefix}-github-actions-role-{aws_account_id}-{region}
           AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
           AWS_REGION="${{ env.AWS_REGION }}"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
           
           if [ -z "$AWS_ACCOUNT" ]; then
             echo "❌ Error: AWS_ACCOUNT_ID secret is required"
@@ -66,7 +72,8 @@ jobs:
             exit 1
           fi
           
-          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
           echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
           echo "Using role ARN: ${ROLE_ARN}"
@@ -92,9 +99,10 @@ jobs:
           ENV="${{ inputs.environment }}"
           AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
-          STATE_KEY="${REPO_OWNER}/${REPO_NAME}/terraform.tfstate"
+          STATE_KEY="org=${REPO_OWNER}/repo=${REPO_NAME}/terraform.tfstate"
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
           echo "state_key=${STATE_KEY}" >> $GITHUB_OUTPUT
           echo "S3 Bucket: ${BUCKET_NAME}"
