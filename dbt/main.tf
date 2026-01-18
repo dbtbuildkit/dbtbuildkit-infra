@@ -618,7 +618,8 @@ resource "aws_codebuild_project" "dbt_projects" {
       value = coalesce(
         lookup(each.value, "incident-response-plan", null),
         try(lookup(lookup(each.value, "incident-manager", {}), "incident-response-plan", null), null),
-        var.incident_response_plan_default != "" ? var.incident_response_plan_default : null
+        var.incident_response_plan_default != "" ? var.incident_response_plan_default : null,
+        ""
       )
     }
 
