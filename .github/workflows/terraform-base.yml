@@ -91,10 +91,15 @@ jobs:
           fi
           
           ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME_FULL="${ROLE_NAME}"
           ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
+          
+          echo "Role name (before truncation): ${ROLE_NAME_FULL}"
+          echo "Role name (after truncation, max 64 chars): ${ROLE_NAME}"
+          echo "Role ARN: ${ROLE_ARN}"
           echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
-          echo "Using role ARN: ${ROLE_ARN}"
+          echo "role_name=${ROLE_NAME}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

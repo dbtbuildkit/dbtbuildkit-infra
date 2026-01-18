@@ -210,10 +210,15 @@ jobs:
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
           
           # Generate role and policy names with prefix (max 64 chars for role, 128 for policy)
-          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
-          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
-          POLICY_NAME="${RESOURCE_PREFIX}-github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
-          POLICY_NAME=$(echo "$POLICY_NAME" | cut -c1-128)
+          ROLE_NAME_FULL="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME_FULL" | cut -c1-64)
+          POLICY_NAME_FULL="${RESOURCE_PREFIX}-github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
+          POLICY_NAME=$(echo "$POLICY_NAME_FULL" | cut -c1-128)
+          
+          echo "Role name (before truncation): ${ROLE_NAME_FULL}"
+          echo "Role name (after truncation, max 64 chars): ${ROLE_NAME}"
+          echo "Policy name (before truncation): ${POLICY_NAME_FULL}"
+          echo "Policy name (after truncation, max 128 chars): ${POLICY_NAME}"
           
           # Store names for later use
           echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
@@ -569,6 +574,7 @@ jobs:
           # Create terraform.tfvars
           CUSTOM_POLICY_ARN="${{ secrets.AWS_POLICY_ARN || '' }}"
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
+          REPO_OWNER="${{ steps.repo-info.outputs.repo_owner }}"
           cat > terraform.tfvars << EOF
           project       = "${{ steps.repo-info.outputs.project_name }}"
           env           = "${ENV}"
