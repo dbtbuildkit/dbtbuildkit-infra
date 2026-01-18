@@ -150,12 +150,12 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      - name: Setup AWS CLI
+      - name: Verify AWS CLI
         run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
+          # AWS CLI is pre-installed on GitHub Actions runners
+          # Just verify it's available and working
           aws --version
+          echo "AWS CLI is ready"
 
       - name: Get repository information
         id: repo-info

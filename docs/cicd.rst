@@ -45,6 +45,12 @@ Step 2: Create Your CI/CD Workflow
 
 Create a ``.github/workflows/cicd.yml`` file in your repository:
 
+**Important:** You must include the required permissions at the workflow level. The reusable workflows require these permissions to function properly:
+
+- ``id-token: write`` - Required for OIDC authentication with AWS
+- ``contents: read`` - Required to checkout the repository
+- ``pull-requests: write`` - Required to comment on Pull Requests in CI workflow
+
 .. code-block:: yaml
 
    name: CI/CD Pipeline
@@ -54,6 +60,11 @@ Create a ``.github/workflows/cicd.yml`` file in your repository:
        branches: [main]
      pull_request:
        branches: [main]
+
+   permissions:
+     id-token: write
+     contents: read
+     pull-requests: write
 
    jobs:
      setup-cicd:
@@ -268,6 +279,11 @@ Simple CI/CD pipeline with plan and apply:
        branches: [main]
      pull_request:
        branches: [main]
+
+   permissions:
+     id-token: write
+     contents: read
+     pull-requests: write
 
    jobs:
      setup-cicd:

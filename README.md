@@ -142,7 +142,26 @@ Go to **Settings > Secrets and variables > Actions** and add:
 
 Create a `.github/workflows/cicd.yml` file in your repository and use the reusable workflows:
 
+**Important:** You must include the required permissions at the workflow level. The reusable workflows require these permissions to function properly:
+
+- `id-token: write` - Required for OIDC authentication with AWS
+- `contents: read` - Required to checkout the repository
+- `pull-requests: write` - Required to comment on Pull Requests in CI workflow
+
 ```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
 jobs:
   setup-cicd:
     uses: dbtbuildkit/dbtbuildkit-infra/.github/workflows/setup-cicd.yml@main
@@ -374,6 +393,12 @@ Go to **Settings > Secrets and variables > Actions** and add:
 
 Create a `.github/workflows/cicd.yml` file in your repository:
 
+**Important:** You must include the required permissions at the workflow level. The reusable workflows require these permissions to function properly:
+
+- `id-token: write` - Required for OIDC authentication with AWS
+- `contents: read` - Required to checkout the repository
+- `pull-requests: write` - Required to comment on Pull Requests in CI workflow
+
 ```yaml
 name: CI/CD Pipeline
 
@@ -382,6 +407,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
 
 jobs:
   setup-cicd:
