@@ -22,6 +22,11 @@ on:
         required: false
         default: false
         type: boolean
+      resource_name_prefix:
+        description: 'Optional prefix for resource names (bucket, role, policy) to avoid conflicts. Default: dbt-kit'
+        required: false
+        default: 'dbt-kit'
+        type: string
   workflow_call:
     inputs:
       environment:
@@ -33,6 +38,11 @@ on:
         type: string
         default: 'us-east-1'
         description: 'AWS Region'
+      resource_name_prefix:
+        required: false
+        type: string
+        default: 'dbt-kit'
+        description: 'Optional prefix for resource names (bucket, role, policy) to avoid conflicts. Default: dbt-kit'
     outputs:
       role_arn:
         description: 'ARN of the created IAM role'
@@ -193,8 +203,22 @@ jobs:
           ENV="${{ inputs.environment || 'dev' }}"
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          
+          # Generate bucket name with prefix (max 63 chars)
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          # Generate role and policy names with prefix (max 64 chars for role, 128 for policy)
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
+          POLICY_NAME="${RESOURCE_PREFIX}-github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
+          POLICY_NAME=$(echo "$POLICY_NAME" | cut -c1-128)
+          
+          # Store names for later use
+          echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
+          echo "ROLE_NAME=${ROLE_NAME}" >> $GITHUB_ENV
+          echo "POLICY_NAME=${POLICY_NAME}" >> $GITHUB_ENV
           
           # Create provider.tf
           cat > provider.tf << EOF
@@ -267,6 +291,16 @@ jobs:
             type        = string
           }
           
+          variable "role_name" {
+            description = "IAM role name"
+            type        = string
+          }
+          
+          variable "policy_name" {
+            description = "IAM policy name"
+            type        = string
+          }
+          
           locals {
             common_tags = {
               env              = var.env
@@ -329,7 +363,7 @@ jobs:
           }
           
           resource "aws_iam_role" "github_actions_role" {
-            name = "github-actions-role-${var.aws_account}-${var.aws_region}"
+            name = var.role_name
             tags = local.common_tags
             assume_role_policy = jsonencode({
               Version = "2012-10-17",
@@ -365,7 +399,7 @@ jobs:
           
           # Default policy for dbt projects CI/CD
           resource "aws_iam_policy" "github_actions_policy" {
-            name        = "github-actions-policy-${var.aws_account}-${var.aws_region}"
+            name        = var.policy_name
             description = "Default policy for GitHub Actions to manage dbt projects CI/CD infrastructure"
             tags = local.common_tags
             policy = jsonencode({
@@ -544,6 +578,8 @@ jobs:
           creation_date = "${{ steps.repo-info.outputs.creation_date }}"
           updated_by    = "${{ steps.repo-info.outputs.updated_by }}"
           bucket_name   = "${BUCKET_NAME}"
+          role_name     = "${ROLE_NAME}"
+          policy_name   = "${POLICY_NAME}"
           custom_policy_arn = "${CUSTOM_POLICY_ARN}"
           EOF
           
@@ -572,7 +608,10 @@ jobs:
           ENV="${{ inputs.environment || 'dev' }}"
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          
+          # Generate bucket name with prefix
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
           
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" &>/dev/null; then
@@ -602,10 +641,18 @@ jobs:
           cd .github/cicd-setup
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
           ENV="${{ inputs.environment || 'dev' }}"
-          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          
+          # Generate bucket name with prefix (max 63 chars)
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          # Generate role and policy names with prefix (max 64 chars for role, 128 for policy)
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
+          POLICY_NAME="${RESOURCE_PREFIX}-github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
+          POLICY_NAME=$(echo "$POLICY_NAME" | cut -c1-128)
           
           ROLE_EXISTS=false
           BUCKET_EXISTS=false
@@ -638,8 +685,15 @@ jobs:
           ENV="${{ inputs.environment || 'dev' }}"
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          BUCKET_NAME="${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
           BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          
+          # Get role and policy names with character limits
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
+          POLICY_NAME="${RESOURCE_PREFIX}-github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
+          POLICY_NAME=$(echo "$POLICY_NAME" | cut -c1-128)
           
           # Check if S3 bucket exists and import it
           if aws s3api head-bucket --bucket "$BUCKET_NAME" --region "$AWS_REGION" &>/dev/null; then
@@ -662,14 +716,12 @@ jobs:
           fi
           
           # Check if IAM role exists
-          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
           if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
             echo "IAM Role exists, importing..."
             terraform import aws_iam_role.github_actions_role "$ROLE_NAME" || true
           fi
           
           # Check if IAM policy exists (default policy)
-          POLICY_NAME="github-actions-policy-${AWS_ACCOUNT}-${AWS_REGION}"
           POLICY_ARN="arn:aws:iam::${{ steps.repo-info.outputs.aws_account }}:policy/${POLICY_NAME}"
           if aws iam get-policy --policy-arn "$POLICY_ARN" &>/dev/null; then
             echo "IAM Policy exists, importing..."
@@ -684,7 +736,9 @@ jobs:
         run: |
           AWS_ACCOUNT="${{ steps.repo-info.outputs.aws_account }}"
           AWS_REGION="${{ env.AWS_REGION }}"
-          ROLE_NAME="github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
           echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
           echo "role_name=${ROLE_NAME}" >> $GITHUB_OUTPUT
@@ -700,7 +754,8 @@ jobs:
             if [ -n "${{ secrets.AWS_POLICY_ARN }}" ]; then
               echo "  - IAM Policy attached: ${{ secrets.AWS_POLICY_ARN }}"
             else
-              echo "  - IAM Policy: github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
+              RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+              echo "  - IAM Policy: ${RESOURCE_PREFIX}-github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
             fi
             echo "  - OIDC Provider for GitHub"
           else
@@ -712,7 +767,8 @@ jobs:
           if [ -n "${{ secrets.AWS_POLICY_ARN }}" ]; then
             echo "  - IAM Policy attached: ${{ secrets.AWS_POLICY_ARN }}"
           else
-            echo "  - IAM Policy: github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
+            RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+            echo "  - IAM Policy: ${RESOURCE_PREFIX}-github-actions-policy-${{ steps.repo-info.outputs.aws_account }}-${{ env.AWS_REGION }}"
           fi
           echo "  - OIDC Provider for GitHub"
           fi
