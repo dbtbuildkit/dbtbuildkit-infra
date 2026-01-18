@@ -615,11 +615,10 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "INCIDENT_RESPONSE_PLAN"
-      value = coalesce(
-        lookup(each.value, "incident-response-plan", null),
-        try(lookup(lookup(each.value, "incident-manager", {}), "incident-response-plan", null), null),
-        var.incident_response_plan_default != "" ? var.incident_response_plan_default : null,
-        ""
+      value = lookup(each.value, "incident-response-plan", "") != "" ? lookup(each.value, "incident-response-plan", "") : (
+        try(lookup(lookup(each.value, "incident-manager", {}), "incident-response-plan", ""), "") != "" ? try(lookup(lookup(each.value, "incident-manager", {}), "incident-response-plan", ""), "") : (
+          var.incident_response_plan_default != "" ? var.incident_response_plan_default : ""
+        )
       )
     }
 
