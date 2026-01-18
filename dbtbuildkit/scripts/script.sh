@@ -83,7 +83,13 @@ if [ ! -d "$FOLDER" ]; then
     fi
 fi
 
-cd "$FOLDER"
+# Save the absolute path to the docker folder before changing directories
+DOCKER_FOLDER=$(cd "$FOLDER" && pwd) || {
+    echo "ERROR: Could not access docker folder: $FOLDER"
+    exit 1
+}
+
+cd "$DOCKER_FOLDER"
 ls -a
 
 echo "Checking Git LFS..."
@@ -103,7 +109,8 @@ if command -v git-lfs &> /dev/null; then
             echo "ℹ️  dbt-kit file is not tracked by Git LFS or already downloaded"
         fi
 
-        cd "$FOLDER"
+        # Return to the docker folder using absolute path
+        cd "$DOCKER_FOLDER"
     else
         echo "⚠️  Not a Git repository or could not find root"
     fi
@@ -119,35 +126,8 @@ if [ -f "dbt-kit" ]; then
         if [ -n "$GIT_ROOT" ]; then
             cd "$GIT_ROOT"
             git lfs pull --include="dbtbuildkit/docker/dbt-kit" || git lfs pull
-            # Ensure we're back in the correct folder
-            if [ -d "$FOLDER" ]; then
-                cd "$FOLDER"
-            else
-                # Try to find the folder again using TERRAFORM_ROOT or Git root
-                FOUND=0
-                if [ -n "$TERRAFORM_ROOT" ] && [ -d "$TERRAFORM_ROOT/dbtbuildkit/docker" ]; then
-                    FOLDER="$TERRAFORM_ROOT/dbtbuildkit/docker"
-                    cd "$FOLDER"
-                    FOUND=1
-                elif [ -n "$TERRAFORM_ROOT" ] && [ -d "$TERRAFORM_ROOT/infra/dbtbuildkit/docker" ]; then
-                    FOLDER="$TERRAFORM_ROOT/infra/dbtbuildkit/docker"
-                    cd "$FOLDER"
-                    FOUND=1
-                elif [ -d "$GIT_ROOT/dbtbuildkit/docker" ]; then
-                    FOLDER="$GIT_ROOT/dbtbuildkit/docker"
-                    cd "$FOLDER"
-                    FOUND=1
-                elif [ -d "$GIT_ROOT/infra/dbtbuildkit/docker" ]; then
-                    FOLDER="$GIT_ROOT/infra/dbtbuildkit/docker"
-                    cd "$FOLDER"
-                    FOUND=1
-                fi
-                
-                if [ $FOUND -eq 0 ]; then
-                    echo "ERROR: Could not find docker directory after Git LFS pull"
-                    exit 1
-                fi
-            fi
+            # Return to the docker folder using the saved absolute path
+            cd "$DOCKER_FOLDER"
 
             if head -1 dbt-kit | grep -q "version https://git-lfs"; then
                 echo "ERROR: Could not download binary from Git LFS"
