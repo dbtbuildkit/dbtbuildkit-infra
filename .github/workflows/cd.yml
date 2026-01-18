@@ -65,18 +65,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debug - Check role ARN
+      - name: Get IAM Role ARN
+        id: get-role-arn
         run: |
-          echo "Role ARN from terraform-base: ${{ needs.terraform-base.outputs.role_arn }}"
-          if [ -z "${{ needs.terraform-base.outputs.role_arn }}" ]; then
-            echo "❌ Error: role_arn is empty!"
+          # Use the same pattern as setup-cicd.yml: {prefix}-github-actions-role-{aws_account_id}-{region}
+          AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+          AWS_REGION="${{ inputs.aws_region || 'us-east-1' }}"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          
+          if [ -z "$AWS_ACCOUNT" ]; then
+            echo "❌ Error: AWS_ACCOUNT_ID secret is required"
             exit 1
           fi
+          
+          ROLE_NAME="${RESOURCE_PREFIX}-github-actions-role-${AWS_ACCOUNT}-${AWS_REGION}"
+          ROLE_NAME=$(echo "$ROLE_NAME" | cut -c1-64)
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT}:role/${ROLE_NAME}"
+          
+          echo "Role ARN: ${ROLE_ARN}"
+          echo "role_arn=${ROLE_ARN}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ needs.terraform-base.outputs.role_arn }}
+          role-to-assume: ${{ steps.get-role-arn.outputs.role_arn }}
           role-session-name: GitHubActions-TerraformApply
           aws-region: ${{ inputs.aws_region || 'us-east-1' }}
 
@@ -90,21 +102,39 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan-${{ inputs.environment }}
-          path: ${{ needs.terraform-base.outputs.terraform_directory }}
+          path: ${{ inputs.terraform_directory || '.' }}
         continue-on-error: true
 
+      - name: Get S3 bucket name and state key
+        id: get-bucket
+        run: |
+          # Keep original case for REPO_OWNER (GitHub org names are case-sensitive for OIDC tokens)
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME=$(basename "${{ github.repository }}" 2>/dev/null || echo "${{ github.event.repository.name }}" || echo "terraform")
+          ENV="${{ inputs.environment }}"
+          AWS_ACCOUNT="${{ secrets.AWS_ACCOUNT_ID }}"
+          AWS_REGION="${{ inputs.aws_region || 'us-east-1' }}"
+          RESOURCE_PREFIX="${{ inputs.resource_name_prefix || 'dbt-kit' }}"
+          BUCKET_NAME="${RESOURCE_PREFIX}-${ENV}-${AWS_REGION}-${AWS_ACCOUNT}--tfstates"
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-63)
+          STATE_KEY="org=${REPO_OWNER}/repo=${REPO_NAME}/terraform.tfstate"
+          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+          echo "state_key=${STATE_KEY}" >> $GITHUB_OUTPUT
+          echo "S3 Bucket: ${BUCKET_NAME}"
+          echo "State Key: ${STATE_KEY}"
+
       - name: Terraform Init
-        working-directory: ${{ needs.terraform-base.outputs.terraform_directory }}
+        working-directory: ${{ inputs.terraform_directory || '.' }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ needs.terraform-base.outputs.bucket_name }}" \
-            -backend-config="key=${{ needs.terraform-base.outputs.state_key }}" \
+            -backend-config="bucket=${{ steps.get-bucket.outputs.bucket_name }}" \
+            -backend-config="key=${{ steps.get-bucket.outputs.state_key }}" \
             -backend-config="region=${{ inputs.aws_region || 'us-east-1' }}" \
             -backend-config="use_lockfile=true" \
             -backend-config="encrypt=true"
 
       - name: Terraform Apply
-        working-directory: ${{ needs.terraform-base.outputs.terraform_directory }}
+        working-directory: ${{ inputs.terraform_directory || '.' }}
         run: |
           if [ -f "tfplan" ]; then
             echo "Using existing plan file"
