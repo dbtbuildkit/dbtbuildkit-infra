@@ -4,7 +4,7 @@ Usage Examples
 This section provides practical examples of how to use the DbtBuildKit modules.
 
 .. note::
-   All examples use GitHub as the module source with the format: ``git::https://dbtbuildkit/dbtbuildkit-infra.git//path/to/module``
+   All examples use GitHub as the module source with the format: ``git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//path/to/module``
    
    You can specify a specific version using:
    
@@ -12,7 +12,7 @@ This section provides practical examples of how to use the DbtBuildKit modules.
    - ``?ref=v1.0.0`` for a specific tag
    - ``?ref=abc1234`` for a specific commit
    
-   Example: ``git::https://dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=v1.0.0``
+   Example: ``git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=v1.0.0``
    
    **Important**: Since modules are called directly from GitHub, they are typically used in separate projects. 
    When using the ``dbt`` module, you should provide the GitHub connection ARN directly instead of referencing 
@@ -30,7 +30,7 @@ This example shows how to create an ECR repository and GitHub connection:
 .. code-block:: terraform
 
    module "dbtbuildkit" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -60,7 +60,7 @@ This example shows how to create DBT CodeBuild projects. Note that the GitHub co
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -90,7 +90,7 @@ Here's how to use them:
 .. code-block:: terraform
 
    module "dbtbuildkit" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
      
      project             = "my-project"
      env                 = "dev"
@@ -122,7 +122,7 @@ Here's how to use them:
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -150,7 +150,7 @@ This example shows how to use minimal IAM policy for better security:
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -188,7 +188,7 @@ This example shows how to add custom IAM policy statements:
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -229,7 +229,7 @@ This example shows how to use an existing GitHub connection:
 .. code-block:: terraform
 
    module "dbtbuildkit" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -253,7 +253,7 @@ This example shows how to configure a custom ECR repository:
 .. code-block:: terraform
 
    module "dbtbuildkit" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbtbuildkit?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -281,7 +281,7 @@ This example shows how to use SSH instead of native GitHub integration:
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"
@@ -295,6 +295,33 @@ This example shows how to use SSH instead of native GitHub integration:
        project = "my-project"
      }
    }
+
+Terraform Backend Configuration
+-------------------------------
+
+Example: Backend Configuration with S3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When using Terraform with these modules, configure your backend to use S3. The state key follows a specific pattern to organize state files by organization and repository:
+
+.. code-block:: terraform
+
+   terraform {
+     backend "s3" {
+       bucket = "your-terraform-state-bucket"
+       key    = "org={repo-owner}/repo={repo-name}/terraform.tfstate"
+       region = "us-east-1"
+     }
+   }
+
+**Note:** Replace `{repo-owner}` and `{repo-name}` with your actual GitHub organization and repository names. This format helps organize state files by organization and repository, making it easier to manage multiple projects in the same S3 bucket.
+
+**Example:**
+- Organization: `my-org`
+- Repository: `my-dbt-project`
+- State key: `org=my-org/repo=my-dbt-project/terraform.tfstate`
+
+If you're using the CI/CD workflows (see :doc:`cicd`), the backend configuration is automatically handled by the workflows. The state key pattern is automatically generated based on your GitHub repository information.
 
 Configuration File Examples
 ---------------------------
@@ -393,7 +420,7 @@ you can access outputs within the same project or reference them from other proj
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      # ... configuration ...
    }
    
@@ -444,7 +471,7 @@ Example with manual values:
 .. code-block:: terraform
 
    module "dbt" {
-     source = "git::https://dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
+     source = "git::https://github.com/dbtbuildkit/dbtbuildkit-infra.git//dbt?ref=main"
      
      project    = "my-project"
      env        = "dev"

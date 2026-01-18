@@ -136,6 +136,8 @@ Automatically checks if CI/CD infrastructure exists and creates it if needed.
 
 **Note:** The default prefix is ``dbt-kit``. You can customize it using the ``resource_name_prefix`` input to avoid conflicts with existing resources.
 
+**Important:** GitHub organization names are case-sensitive in OIDC tokens. The workflow automatically preserves the original case of your organization name when creating the trust policy for the IAM role. This ensures that the OIDC authentication works correctly.
+
 ci.yml
 ~~~~~~
 
@@ -222,9 +224,12 @@ You can use different environments (dev, stg, prd) by passing the ``environment`
          aws_region: 'us-east-1'
 
 Each environment will have its own:
-- S3 bucket for Terraform state (following the pattern: ``{environment}-{region}-{aws_account_id}--tfstates``)
-- IAM Role (shared across environments in the same region, following the pattern: ``github-actions-role-{aws_account_id}-{region}``)
+- S3 bucket for Terraform state (following the pattern: ``{prefix}-{environment}-{region}-{aws_account_id}--tfstates``, max 63 chars)
+- IAM Role (shared across environments in the same region, following the pattern: ``{prefix}-github-actions-role-{aws_account_id}-{region}``, max 64 chars)
+- IAM Policy (following the pattern: ``{prefix}-github-actions-policy-{aws_account_id}-{region}``, max 128 chars)
 - The provided IAM Policy is attached to the role
+
+**Note:** The default prefix is ``dbt-kit``. All resource names are automatically truncated to respect AWS limits.
 
 AWS Region Support
 ------------------
@@ -399,12 +404,15 @@ If you see "Unable to find reusable workflow" errors:
 Authentication Errors
 ~~~~~~~~~~~~~~~~~~~~~
 
-If you see AWS authentication errors:
+If you see AWS authentication errors (e.g., "Not authorized to perform sts:AssumeRoleWithWebIdentity"):
 
 1. Verify ``AWS_ACCOUNT_ID`` and ``AWS_POLICY_ARN`` secrets are configured correctly
-2. Check that the IAM role (following the pattern ``github-actions-role-{aws_account_id}-{region}``) has the necessary trust relationship with GitHub OIDC
-3. If using SSO/OIDC, ensure your GitHub Actions environment has proper AWS credentials configured
-4. If using access keys, verify ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` are correct
+2. Check that the IAM role (following the pattern ``{prefix}-github-actions-role-{aws_account_id}-{region}``) has the necessary trust relationship with GitHub OIDC
+3. **Important:** GitHub organization names are case-sensitive in OIDC tokens. The workflow automatically preserves the original case of your organization name when creating the trust policy. If you manually created the role, ensure the trust policy uses the exact case of your GitHub organization name.
+4. Verify the trust policy condition matches: ``repo:{your-org}/*:*`` (note the format with two colons)
+5. Ensure the workflow has ``permissions: id-token: write`` configured
+6. If using SSO/OIDC, ensure your GitHub Actions environment has proper AWS credentials configured
+7. If using access keys, verify ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` are correct
 
 State Lock Errors
 ~~~~~~~~~~~~~~~~~
@@ -414,6 +422,24 @@ If you see state lock errors:
 1. Check if another Terraform operation is running
 2. Verify S3 bucket permissions
 3. Check if lockfile exists in S3 and remove if stale
+
+State Key Format
+~~~~~~~~~~~~~~~~
+
+The state key follows the pattern: ``org={repo-owner}/repo={repo-name}/terraform.tfstate``
+
+This format helps organize state files by organization and repository, making it easier to manage multiple projects in the same S3 bucket.
+
+Resource Naming
+~~~~~~~~~~~~~~~
+
+All resources use a prefix (default: ``dbt-kit``) to avoid conflicts:
+
+- **S3 Bucket**: ``{prefix}-{environment}-{region}-{account}--tfstates`` (max 63 chars)
+- **IAM Role**: ``{prefix}-github-actions-role-{account}-{region}`` (max 64 chars)
+- **IAM Policy**: ``{prefix}-github-actions-policy-{account}-{region}`` (max 128 chars)
+
+Resource names are automatically truncated to respect AWS limits. You can customize the prefix using the ``resource_name_prefix`` input in all workflows.
 
 More Information
 ----------------

@@ -225,11 +225,13 @@ Create a `backend.tf` file (see example in `example/backend.tf`):
 terraform {
   backend "s3" {
     bucket = "your-terraform-state-bucket"
-    key    = "dbtbuildkit/terraform.tfstate"
+    key    = "org={repo-owner}/repo={repo-name}/terraform.tfstate"
     region = "us-east-1"
   }
 }
 ```
+
+**Note:** The state key follows the pattern `org={repo-owner}/repo={repo-name}/terraform.tfstate`. Replace `{repo-owner}` and `{repo-name}` with your actual GitHub organization and repository names. This format helps organize state files by organization and repository.
 
 ### 3. Configure Variables
 
@@ -466,6 +468,17 @@ Automatically checks if CI/CD infrastructure exists and creates it if needed.
 - `AWS_SECRET_ACCESS_KEY` (required): AWS Secret Access Key
 - `AWS_SECRET_TOKEN` (optional): AWS Session Token (required for SSO/temporary credentials)
 - `AWS_POLICY_ARN` (optional): ARN of custom IAM policy to attach to the created role (uses default policy if not provided)
+
+**What it creates:**
+
+- S3 bucket for Terraform state (with versioning enabled) following the pattern: `{prefix}-{environment}-{region}-{aws_account_id}--tfstates` (max 63 chars)
+- IAM Role for GitHub Actions following the pattern: `{prefix}-github-actions-role-{aws_account_id}-{region}` (max 64 chars)
+- IAM Policy (default policy optimized for dbt projects CI/CD, or custom policy if `AWS_POLICY_ARN` is provided) following the pattern: `{prefix}-github-actions-policy-{aws_account_id}-{region}` (max 128 chars)
+- OIDC Provider for GitHub authentication
+
+**Note:** The default prefix is `dbt-kit`. You can customize it using the `resource_name_prefix` input to avoid conflicts with existing resources.
+
+**Important:** GitHub organization names are case-sensitive in OIDC tokens. The workflow automatically preserves the original case of your organization name when creating the trust policy for the IAM role. This ensures that the OIDC authentication works correctly.
 
 #### `ci.yml` - Terraform Plan
 
