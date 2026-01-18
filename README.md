@@ -474,7 +474,7 @@ Runs `terraform plan` for review.
 - `environment` (required): Environment (dev, stg, prd)
 - `aws_region` (optional): AWS region - default: 'us-east-1'
 - `terraform_directory` (optional): Terraform directory - default: '.'
-- `terraform_version` (optional): Terraform version - default: '1.6.0'
+- `terraform_version` (optional): Terraform version - default: '1.10.0'
 
 **Secrets:**
 - `AWS_ACCOUNT_ID` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: `github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`)
@@ -487,7 +487,7 @@ Runs `terraform apply` to provision infrastructure.
 - `environment` (required): Environment (dev, stg, prd)
 - `aws_region` (optional): AWS region - default: 'us-east-1'
 - `terraform_directory` (optional): Terraform directory - default: '.'
-- `terraform_version` (optional): Terraform version - default: '1.6.0'
+- `terraform_version` (optional): Terraform version - default: '1.10.0'
 - `auto_approve` (optional): Auto approve apply - default: false
 
 **Secrets:**

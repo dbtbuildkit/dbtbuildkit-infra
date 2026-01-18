@@ -143,7 +143,7 @@ Runs ``terraform plan`` for review. Can comment on Pull Requests with the plan o
 - ``environment`` (required): Environment (dev, stg, prd)
 - ``aws_region`` (optional): AWS region - default: 'us-east-1'
 - ``terraform_directory`` (optional): Directory containing Terraform files - default: '.'
-- ``terraform_version`` (optional): Terraform version - default: '1.6.0'
+- ``terraform_version`` (optional): Terraform version - default: '1.10.0'
 
 **Secrets:**
 
@@ -165,7 +165,7 @@ Runs ``terraform apply`` to provision or update infrastructure.
 - ``environment`` (required): Environment (dev, stg, prd)
 - ``aws_region`` (optional): AWS region - default: 'us-east-1'
 - ``terraform_directory`` (optional): Directory containing Terraform files - default: '.'
-- ``terraform_version`` (optional): Terraform version - default: '1.6.0'
+- ``terraform_version`` (optional): Terraform version - default: '1.10.0'
 - ``auto_approve`` (optional): Auto approve apply - default: false
 
 **Secrets:**

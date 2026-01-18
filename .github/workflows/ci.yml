@@ -20,7 +20,7 @@ on:
       terraform_version:
         required: false
         type: string
-        default: '1.6.0'
+        default: '1.10.0'
         description: 'Terraform version to use'
     secrets:
       AWS_ACCOUNT_ID:
@@ -77,7 +77,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ inputs.terraform_version || '1.6.0' }}
+          terraform_version: ${{ inputs.terraform_version || '1.10.0' }}
           terraform_wrapper: false
 
       - name: Get S3 bucket name and state key
