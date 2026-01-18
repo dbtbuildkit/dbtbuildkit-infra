@@ -153,7 +153,7 @@ Runs ``terraform plan`` for review. Can comment on Pull Requests with the plan o
 
 **Secrets:**
 
-- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
+- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-{aws_account_id}-{region}``)
 
 **Features:**
 
@@ -177,7 +177,7 @@ Runs ``terraform apply`` to provision or update infrastructure.
 
 **Secrets:**
 
-- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}``)
+- ``AWS_ACCOUNT_ID`` (required): AWS Account ID (used to construct the IAM role ARN following the pattern: ``{prefix}-github-actions-role-{aws_account_id}-{region}``)
 
 **Features:**
 
@@ -202,6 +202,18 @@ State key follows the pattern: ``org={repo-owner}/repo={repo-name}/terraform.tfs
 The IAM role ARN is constructed using: ``arn:aws:iam::{aws_account_id}:role/{prefix}-github-actions-role-{aws_account_id}-{region}`` (max 64 characters for role name)
 
 **Note:** Resource names are automatically truncated to respect AWS limits. The default prefix is ``dbt-kit``, but you can customize it using the ``resource_name_prefix`` input in all workflows.
+
+**Backend Configuration:**
+
+You can use an empty backend configuration in your ``backend.tf`` file:
+
+.. code-block:: terraform
+
+   terraform {
+     backend "s3" {}
+   }
+
+The workflows automatically configure the backend during ``terraform init``, so you don't need to manually specify bucket, key, or region. This makes it easier to manage multiple environments and repositories without worrying about backend configuration.
 
 Multi-Environment Support
 --------------------------

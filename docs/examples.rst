@@ -302,7 +302,29 @@ Terraform Backend Configuration
 Example: Backend Configuration with S3
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When using Terraform with these modules, configure your backend to use S3. The state key follows a specific pattern to organize state files by organization and repository:
+When using Terraform with these modules, you can configure your backend in two ways:
+
+**Recommended: Empty Backend (for CI/CD)**
+
+If you're using the CI/CD workflows (see :doc:`cicd`), you can leave the backend configuration empty. The workflows automatically configure the backend during ``terraform init``:
+
+.. code-block:: terraform
+
+   # -*- coding: utf-8 -*-
+   
+   terraform {
+     backend "s3" {}
+   }
+
+This approach is recommended because:
+- No manual configuration needed when creating CI/CD infrastructure
+- Backend is automatically configured by the workflows
+- State key pattern is automatically generated: ``org={repo-owner}/repo={repo-name}/terraform.tfstate``
+- Works seamlessly with the CI/CD setup workflow
+
+**Alternative: Explicit Backend Configuration**
+
+If you prefer to configure the backend explicitly (e.g., for local development), you can specify all parameters:
 
 .. code-block:: terraform
 
@@ -314,14 +336,12 @@ When using Terraform with these modules, configure your backend to use S3. The s
      }
    }
 
-**Note:** Replace `{repo-owner}` and `{repo-name}` with your actual GitHub organization and repository names. This format helps organize state files by organization and repository, making it easier to manage multiple projects in the same S3 bucket.
+**Note:** Replace `{repo-owner}` and `{repo-name}` with your actual GitHub organization and repository names. The state key pattern ``org={repo-owner}/repo={repo-name}/terraform.tfstate`` helps organize state files by organization and repository, making it easier to manage multiple projects in the same S3 bucket.
 
 **Example:**
 - Organization: `my-org`
 - Repository: `my-dbt-project`
 - State key: `org=my-org/repo=my-dbt-project/terraform.tfstate`
-
-If you're using the CI/CD workflows (see :doc:`cicd`), the backend configuration is automatically handled by the workflows. The state key pattern is automatically generated based on your GitHub repository information.
 
 Configuration File Examples
 ---------------------------

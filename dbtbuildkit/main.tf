@@ -22,15 +22,13 @@ locals {
   aws_account_id = data.aws_caller_identity.current.account_id
   common_tags    = var.tags
 
-
-
-
   ecr_repository_name_raw = var.ecr_repository_name != null ? var.ecr_repository_name : "${var.env}-dbtbuildkit"
   ecr_repository_name     = var.ecr_repository_name_exact ? local.ecr_repository_name_raw : lower("${var.env}-${var.project}-${local.ecr_repository_name_raw}")
-  ecr_folder_path         = "${path.module}/docker"
-  specific_files          = ["Dockerfile", "pyproject.toml", "dbt-kit"]
-
-
+  
+  # Try to use path.module first, but script will fallback to path.root if not found
+  # The script will automatically find the docker directory relative to TERRAFORM_ROOT
+  ecr_folder_path = "${path.module}/docker"
+  specific_files  = ["Dockerfile", "pyproject.toml", "dbt-kit"]
 
   file_triggers = {
     for file in local.specific_files : file => filesha256("${local.ecr_folder_path}/${file}")
@@ -95,13 +93,15 @@ resource "null_resource" "run_script" {
   provisioner "local-exec" {
     command = "chmod +x ${path.module}/scripts/script.sh && ${path.module}/scripts/script.sh"
     environment = {
-      FOLDER         = local.ecr_folder_path
-      AWS_REGION     = var.aws_region
-      AWS_ACCOUNT_ID = local.aws_account_id
-      ECR_REPO_NAME  = aws_ecr_repository.this.name
-      IMAGE_TAG      = var.ecr_image_tag
+      FOLDER          = local.ecr_folder_path
+      TERRAFORM_ROOT  = path.root
+      AWS_REGION      = var.aws_region
+      AWS_ACCOUNT_ID  = local.aws_account_id
+      ECR_REPO_NAME   = aws_ecr_repository.this.name
+      IMAGE_TAG       = var.ecr_image_tag
     }
     interpreter = ["/bin/bash", "-c"]
+    working_dir = path.root
   }
 }
 

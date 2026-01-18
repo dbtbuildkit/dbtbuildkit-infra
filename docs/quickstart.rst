@@ -71,6 +71,12 @@ Step 2: Create CI/CD Workflow
 
 Create a ``.github/workflows/cicd.yml`` file in your repository:
 
+**Important:** You must include the required permissions at the workflow level. The reusable workflows require these permissions to function properly:
+
+* ``id-token: write`` - Required for OIDC authentication with AWS
+* ``contents: read`` - Required to checkout the repository
+* ``pull-requests: write`` - Required to comment on Pull Requests in CI workflow
+
 .. code-block:: yaml
 
    name: CI/CD Pipeline
@@ -81,12 +87,18 @@ Create a ``.github/workflows/cicd.yml`` file in your repository:
      pull_request:
        branches: [main]
 
+   permissions:
+     id-token: write
+     contents: read
+     pull-requests: write
+
    jobs:
      setup-cicd:
        uses: dbtbuildkit/dbtbuildkit-infra/.github/workflows/setup-cicd.yml@main
        with:
          environment: 'dev'
          aws_region: 'us-east-1'
+         resource_name_prefix: 'dbt-kit'  # Optional: default is 'dbt-kit'
        secrets:
          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -115,9 +127,12 @@ Create a ``.github/workflows/cicd.yml`` file in your repository:
 The workflow will automatically:
 
 * Check if infrastructure exists
-* Create S3 bucket for Terraform state (if needed)
-* Create IAM Role for GitHub Actions
+* Create S3 bucket for Terraform state (if needed) following the pattern: ``{prefix}-{environment}-{region}-{aws_account_id}--tfstates`` (max 63 chars)
+* Create IAM Role for GitHub Actions following the pattern: ``{prefix}-github-actions-role-{aws_account_id}-{region}`` (max 64 chars)
+* Create IAM Policy following the pattern: ``{prefix}-github-actions-policy-{aws_account_id}-{region}`` (max 128 chars)
 * Create OIDC Provider for authentication (if needed)
+
+**Note:** The default prefix is ``dbt-kit``. You can customize it using the ``resource_name_prefix`` input to avoid conflicts with existing resources.
 
 Option 2: Manual Setup
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -137,15 +152,40 @@ Step 2: Configure Terraform Backend
 
 Create a ``backend.tf`` file:
 
+**Recommended: Empty Backend (for CI/CD)**
+
+If you're using the CI/CD workflows, you can leave the backend configuration empty. The workflows automatically configure the backend during ``terraform init``:
+
+.. code-block:: terraform
+
+   # -*- coding: utf-8 -*-
+
+   terraform {
+     backend "s3" {}
+   }
+
+This approach is recommended because:
+
+* No manual configuration needed when creating CI/CD infrastructure
+* Backend is automatically configured by the workflows
+* State key pattern is automatically generated: ``org={repo-owner}/repo={repo-name}/terraform.tfstate``
+* Works seamlessly with the CI/CD setup workflow
+
+**Alternative: Explicit Backend Configuration**
+
+If you prefer to configure the backend explicitly (e.g., for local development), you can specify all parameters:
+
 .. code-block:: terraform
 
    terraform {
      backend "s3" {
        bucket = "your-terraform-state-bucket"
-       key    = "dbtbuildkit/terraform.tfstate"
+       key    = "org={repo-owner}/repo={repo-name}/terraform.tfstate"
        region = "us-east-1"
      }
    }
+
+**Note:** Replace ``{repo-owner}`` and ``{repo-name}`` with your actual GitHub organization and repository names. The state key pattern ``org={repo-owner}/repo={repo-name}/terraform.tfstate`` helps organize state files by organization and repository.
 
 Step 3: Configure Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

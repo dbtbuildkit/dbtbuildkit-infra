@@ -197,10 +197,13 @@ jobs:
 
 The workflow will automatically:
 - Check if infrastructure exists
-- Create S3 bucket for Terraform state (if needed)
-- Create IAM Role for GitHub Actions following the pattern: `github-actions-role-${AWS_ACCOUNT_ID}-${AWS_REGION}`
+- Create S3 bucket for Terraform state (if needed) following the pattern: `{prefix}-{environment}-{region}-{aws_account_id}--tfstates` (max 63 chars)
+- Create IAM Role for GitHub Actions following the pattern: `{prefix}-github-actions-role-{aws_account_id}-{region}` (max 64 chars)
+- Create IAM Policy following the pattern: `{prefix}-github-actions-policy-{aws_account_id}-{region}` (max 128 chars)
 - Attach the provided IAM Policy to the created role
 - Create OIDC Provider for authentication (if needed)
+
+**Note:** The default prefix is `dbt-kit`. You can customize it using the `resource_name_prefix` input.
 
 #### Step 3: Use CI/CD Workflows
 
@@ -220,6 +223,28 @@ cd dbtbuildkit-infra
 ### 2. Configure Terraform Backend
 
 Create a `backend.tf` file (see example in `example/backend.tf`):
+
+**Recommended: Empty Backend (for CI/CD)**
+
+If you're using the CI/CD workflows, you can leave the backend configuration empty. The workflows automatically configure the backend during `terraform init`:
+
+```hcl
+# -*- coding: utf-8 -*-
+
+terraform {
+  backend "s3" {}
+}
+```
+
+This approach is recommended because:
+- No manual configuration needed when creating CI/CD infrastructure
+- Backend is automatically configured by the workflows
+- State key pattern is automatically generated: `org={repo-owner}/repo={repo-name}/terraform.tfstate`
+- Works seamlessly with the CI/CD setup workflow
+
+**Alternative: Explicit Backend Configuration**
+
+If you prefer to configure the backend explicitly (e.g., for local development), you can specify all parameters:
 
 ```hcl
 terraform {
@@ -562,6 +587,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
 jobs:
   setup-cicd:
     uses: dbtbuildkit/dbtbuildkit-infra/.github/workflows/setup-cicd.yml@main
@@ -569,7 +599,9 @@ jobs:
       environment: 'dev'
       aws_region: 'us-east-1'
     secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   ci:
     needs: setup-cicd
@@ -578,7 +610,7 @@ jobs:
       environment: 'dev'
       aws_region: 'us-east-1'
     secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   cd:
     needs: [setup-cicd, ci]
@@ -589,7 +621,7 @@ jobs:
       aws_region: 'us-east-1'
       auto_approve: true
     secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 ```
 
 **For more examples:** See `.github/workflows/example-user-workflow.yml` or the [CI/CD Documentation](docs/cicd.rst)

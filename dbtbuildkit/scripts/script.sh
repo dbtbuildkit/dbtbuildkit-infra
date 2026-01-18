@@ -5,12 +5,14 @@
 set -euo pipefail
 
 FOLDER="${FOLDER}"
+TERRAFORM_ROOT="${TERRAFORM_ROOT:-}"
 AWS_REGION="${AWS_REGION}"
 AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID}"
 ECR_REPO_NAME="${ECR_REPO_NAME}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 echo "FOLDER - $FOLDER"
+echo "TERRAFORM_ROOT - $TERRAFORM_ROOT"
 echo "AWS_REGION - $AWS_REGION"
 echo "AWS_ACCOUNT_ID - $AWS_ACCOUNT_ID"
 echo "ECR_REPO_NAME - $ECR_REPO_NAME"
@@ -33,6 +35,53 @@ case $CURRENT_ARCH in
         echo "Warning: Unknown architecture $CURRENT_ARCH, defaulting to linux/amd64"
         ;;
 esac
+
+# Check if FOLDER exists, if not try to find it relative to TERRAFORM_ROOT or Git repository
+if [ ! -d "$FOLDER" ]; then
+    echo "⚠️  Directory $FOLDER does not exist, trying to find it..."
+    
+    # First, try to use TERRAFORM_ROOT if provided
+    if [ -n "$TERRAFORM_ROOT" ] && [ -d "$TERRAFORM_ROOT" ]; then
+        echo "Using TERRAFORM_ROOT as reference: $TERRAFORM_ROOT"
+        # Try common paths relative to terraform root
+        if [ -d "$TERRAFORM_ROOT/dbtbuildkit/docker" ]; then
+            FOLDER="$TERRAFORM_ROOT/dbtbuildkit/docker"
+            echo "✅ Found docker directory at: $FOLDER"
+        elif [ -d "$TERRAFORM_ROOT/infra/dbtbuildkit/docker" ]; then
+            FOLDER="$TERRAFORM_ROOT/infra/dbtbuildkit/docker"
+            echo "✅ Found docker directory at: $FOLDER"
+        else
+            echo "⚠️  Could not find docker directory relative to TERRAFORM_ROOT"
+        fi
+    fi
+    
+    # If still not found, try Git repository
+    if [ ! -d "$FOLDER" ]; then
+        GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+        if [ -n "$GIT_ROOT" ]; then
+            echo "Git repository found at: $GIT_ROOT"
+            # Try to find docker directory in the Git repository
+            if [ -d "$GIT_ROOT/dbtbuildkit/docker" ]; then
+                FOLDER="$GIT_ROOT/dbtbuildkit/docker"
+                echo "✅ Found docker directory at: $FOLDER"
+            elif [ -d "$GIT_ROOT/infra/dbtbuildkit/docker" ]; then
+                FOLDER="$GIT_ROOT/infra/dbtbuildkit/docker"
+                echo "✅ Found docker directory at: $FOLDER"
+            else
+                echo "ERROR: Could not find docker directory"
+                echo "Searched in:"
+                [ -n "$TERRAFORM_ROOT" ] && echo "  - $TERRAFORM_ROOT/dbtbuildkit/docker"
+                [ -n "$TERRAFORM_ROOT" ] && echo "  - $TERRAFORM_ROOT/infra/dbtbuildkit/docker"
+                echo "  - $GIT_ROOT/dbtbuildkit/docker"
+                echo "  - $GIT_ROOT/infra/dbtbuildkit/docker"
+                exit 1
+            fi
+        else
+            echo "ERROR: Directory $FOLDER does not exist and could not find Git repository root"
+            exit 1
+        fi
+    fi
+fi
 
 cd "$FOLDER"
 ls -a
@@ -70,7 +119,35 @@ if [ -f "dbt-kit" ]; then
         if [ -n "$GIT_ROOT" ]; then
             cd "$GIT_ROOT"
             git lfs pull --include="dbtbuildkit/docker/dbt-kit" || git lfs pull
-            cd "$FOLDER"
+            # Ensure we're back in the correct folder
+            if [ -d "$FOLDER" ]; then
+                cd "$FOLDER"
+            else
+                # Try to find the folder again using TERRAFORM_ROOT or Git root
+                FOUND=0
+                if [ -n "$TERRAFORM_ROOT" ] && [ -d "$TERRAFORM_ROOT/dbtbuildkit/docker" ]; then
+                    FOLDER="$TERRAFORM_ROOT/dbtbuildkit/docker"
+                    cd "$FOLDER"
+                    FOUND=1
+                elif [ -n "$TERRAFORM_ROOT" ] && [ -d "$TERRAFORM_ROOT/infra/dbtbuildkit/docker" ]; then
+                    FOLDER="$TERRAFORM_ROOT/infra/dbtbuildkit/docker"
+                    cd "$FOLDER"
+                    FOUND=1
+                elif [ -d "$GIT_ROOT/dbtbuildkit/docker" ]; then
+                    FOLDER="$GIT_ROOT/dbtbuildkit/docker"
+                    cd "$FOLDER"
+                    FOUND=1
+                elif [ -d "$GIT_ROOT/infra/dbtbuildkit/docker" ]; then
+                    FOLDER="$GIT_ROOT/infra/dbtbuildkit/docker"
+                    cd "$FOLDER"
+                    FOUND=1
+                fi
+                
+                if [ $FOUND -eq 0 ]; then
+                    echo "ERROR: Could not find docker directory after Git LFS pull"
+                    exit 1
+                fi
+            fi
 
             if head -1 dbt-kit | grep -q "version https://git-lfs"; then
                 echo "ERROR: Could not download binary from Git LFS"
