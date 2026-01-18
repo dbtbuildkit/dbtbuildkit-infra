@@ -224,7 +224,7 @@ locals {
   }
 
 
-  config_file_path = "${path.root}/${var.file_name}"
+  config_file_path = "${path.root}/${var.folder_name == "." ? "" : var.folder_name}/${var.file_name}"
 
 
   config_file_exists = fileexists(local.config_file_path)

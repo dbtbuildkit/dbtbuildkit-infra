@@ -58,6 +58,12 @@ variable "file_name" {
   description = "CodeBuild environment configuration file"
 }
 
+variable "folder_name" {
+  type        = string
+  default     = "."
+  description = "Folder name for the codebuild configuration file"
+}
+
 variable "use_github_native" {
   description = "If true, uses native GitHub integration. If false, uses SSH as fallback."
   type        = bool
