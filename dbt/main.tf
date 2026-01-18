@@ -520,12 +520,12 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "SLACK_CHANNEL"
-      value = try(each.value["slack-notification"].channel, null)
+      value = lookup(lookup(each.value, "slack-notification", {}), "channel", "")
     }
 
     environment_variable {
       name  = "SLACK_SECRET_NAME"
-      value = try(each.value["slack-notification"].secret_name, null)
+      value = lookup(lookup(each.value, "slack-notification", {}), "secret_name", "")
     }
 
     environment_variable {
@@ -535,12 +535,12 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "TEAMS_SECRET_NAME"
-      value = try(each.value["teams-notification"].secret_name, null)
+      value = lookup(lookup(each.value, "teams-notification", {}), "secret_name", "")
     }
 
     environment_variable {
       name  = "TEAMS_WEBHOOK_URL"
-      value = try(each.value["teams-notification"].webhook_url, null)
+      value = lookup(lookup(each.value, "teams-notification", {}), "webhook_url", "")
     }
 
     environment_variable {
@@ -550,12 +550,12 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "DISCORD_SECRET_NAME"
-      value = try(each.value["discord-notification"].secret_name, null)
+      value = lookup(lookup(each.value, "discord-notification", {}), "secret_name", "")
     }
 
     environment_variable {
       name  = "DISCORD_WEBHOOK_URL"
-      value = try(each.value["discord-notification"].webhook_url, null)
+      value = lookup(lookup(each.value, "discord-notification", {}), "webhook_url", "")
     }
 
     environment_variable {
@@ -565,12 +565,12 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "SNS_TOPIC_ARN"
-      value = try(each.value["sns-notification"].topic_arn, null)
+      value = lookup(lookup(each.value, "sns-notification", {}), "topic_arn", "")
     }
 
     environment_variable {
       name  = "ELEMENTARY_CHANNEL"
-      value = try(each.value.elementary.channel, null)
+      value = lookup(lookup(each.value, "elementary", {}), "channel", "")
     }
 
     environment_variable {
@@ -594,7 +594,7 @@ resource "aws_codebuild_project" "dbt_projects" {
 
     environment_variable {
       name  = "DESCRIPTION_ELEMENTARY"
-      value = try(each.value.elementary.description, null)
+      value = lookup(lookup(each.value, "elementary", {}), "description", "")
     }
 
     environment_variable {
