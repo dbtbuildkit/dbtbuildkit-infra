@@ -219,12 +219,72 @@ a.reference:hover {
     margin: var(--dbt-spacing-lg) 0;
     overflow-x: auto;
     box-shadow: var(--dbt-shadow-sm);
+    position: relative; /* Necessário para posicionar o botão de copiar */
 }
 
 .highlight pre {
     margin: 0;
     padding: 0;
     background: transparent;
+}
+
+/* Estilos para o botão de copiar código (sphinx-copybutton) */
+button.copybtn {
+    position: absolute !important;
+    display: flex !important;
+    top: 0.5em !important;
+    right: 0.5em !important;
+    width: 2em !important;
+    height: 2em !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s, border .3s, background-color .3s !important;
+    user-select: none !important;
+    padding: 0 !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    outline: none !important;
+    border-radius: 0.4em !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    color: #57606a !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+button.copybtn svg {
+    stroke: currentColor !important;
+    width: 1.2em !important;
+    height: 1.2em !important;
+    padding: 0.1em !important;
+}
+
+/* Mostrar o botão ao passar o mouse sobre o bloco de código */
+.highlight:hover button.copybtn,
+.highlight-yaml:hover button.copybtn,
+.highlight-bash:hover button.copybtn,
+.highlight-terraform:hover button.copybtn,
+.highlight-hcl:hover button.copybtn,
+.highlight-yaml:hover button.copybtn,
+button.copybtn.success {
+    opacity: 1 !important;
+}
+
+.highlight button.copybtn:hover {
+    background-color: rgba(235, 235, 235, 0.95) !important;
+}
+
+.highlight button.copybtn:active {
+    background-color: rgba(187, 187, 187, 0.95) !important;
+}
+
+button.copybtn.success {
+    border-color: #22863a !important;
+    color: #22863a !important;
+}
+
+/* Garantir que os blocos de código com diferentes classes também tenham position relative */
+div[class*="highlight-"] {
+    position: relative !important;
 }
 
 /* Blocos de aviso/nota */

@@ -33,6 +33,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx_immaterial',
+    'sphinx_copybutton',
 ]
 
 # templates_path = ['_templates']  # Desabilitado para usar tema conestack sem interferências
@@ -72,4 +73,10 @@ html_theme_options = {
     ],
     "repo_url": "https://github.com/dbtbuildkit/dbtbuildkit-infra",
     "repo_name": "dbtbuildkit/dbtbuildkit-infra",
+    "features": [
+        "content.code.copy",  # Ativa o botão de copiar código nativo do tema
+    ],
 }
+
+copybutton_prompt_text = r"\$ |>>> |In \[\d*\]: |\.\.\. "
+copybutton_remove_prompts = True
