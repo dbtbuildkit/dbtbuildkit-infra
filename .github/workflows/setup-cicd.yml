@@ -468,6 +468,7 @@ jobs:
                     "iam:PutRolePolicy",
                     "iam:DeleteRolePolicy",
                     "iam:CreatePolicy",
+                    "iam:PassRole",
                     "iam:TagRole",
                     "iam:TagPolicy"
                   ]
