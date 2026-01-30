@@ -54,8 +54,8 @@ variable "tags" {
 
 variable "file_name" {
   type        = string
-  default     = "codebuild-config.yml"
-  description = "CodeBuild environment configuration file"
+  default     = "dbt_project.yml"
+  description = "Configuration file for CodeBuild projects (dbt_project.yml or codebuild-config.yml). When using dbt_project.yml, add a top-level 'dbtbuildkit' key with a list of projects."
 }
 
 variable "folder_name" {

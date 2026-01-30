@@ -1,7 +1,8 @@
-# Exemplo de arquivo de configuração para projetos DBT
-# Copie este arquivo para codebuild-config.yml e ajuste conforme necessário
+# Exemplo alternativo: arquivo separado para configuração CodeBuild
+# Use quando file_name = "codebuild-config.yml" no módulo dbt.
+# Por padrão o módulo usa dbt_project.yml (veja dbt_project.example.yml).
 
-codebuild:
+dbtbuildkit:
   # Projeto básico - execução manual
   - name: projeto-basico
     active: true

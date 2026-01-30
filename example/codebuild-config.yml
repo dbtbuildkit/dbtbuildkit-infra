@@ -1,7 +1,7 @@
 # Exemplo de arquivo de configuração para projetos DBT
 # Copie este arquivo para codebuild-config.yml e ajuste conforme necessário
 
-codebuild:
+dbtbuildkit:
   # Projeto básico - execução manual
   - name: projeto-basico
     repo: dbtbuildkit-project-template

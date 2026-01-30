@@ -1,0 +1,21 @@
+# Exemplo: dbt_project.yml com seção CodeBuild (DbtBuildKit)
+# O módulo dbt usa este arquivo por padrão (file_name = "dbt_project.yml").
+
+name: 'dbtbuildkit-project'
+config-version: 2
+version: '1.0.0'
+profile: 'default'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+dbtbuildkit:
+  - name: projeto-basico
+    repo: dbtbuildkit-project-template
+    org: dbtbuildkit
+    active: true
+    engine: athena
+    commands:
+      - dbt deps
+      - dbt build
+    s3_artifacts_bucket: "testes-ari"

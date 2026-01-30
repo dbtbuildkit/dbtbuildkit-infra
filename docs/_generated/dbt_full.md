@@ -48,7 +48,7 @@ No modules.
 | enable\_default\_iam\_permissions | If true, adds default broad permissions for DBT (S3, Athena, Redshift, Glue, etc). If false, uses only iam\_policy\_statements | `bool` | `true` | no |
 | env | Deployment environment (accepted values: dev, stg, prd) | `string` | n/a | yes |
 | events\_role\_name\_suffix | Custom suffix for Events role name. If not provided, uses 'events-role' | `string` | `"events-role"` | no |
-| file\_name | CodeBuild environment configuration file | `string` | `"codebuild-config.yml"` | no |
+| file\_name | Configuration file for CodeBuild (dbt\_project.yml or codebuild-config.yml) | `string` | `"dbt_project.yml"` | no |
 | github\_branch | GitHub repository branch to use (e.g.: main, develop) | `string` | `"main"` | no |
 | github\_connection\_arn | GitHub connection ARN for native integration. Required when use\_github\_native = true | `string` | `null` | no |
 | iam\_policy\_statements | List of custom IAM statements to add to CodeBuild policy. If not provided, uses default broad permissions | ```list(object({ Effect = string Action = list(string) Resource = string }))``` | `[]` | no |

@@ -35,14 +35,22 @@ modules/dbt/
 <!-- BEGIN_TF_DOCS -->
 <!-- END_TF_DOCS -->
 
-## Arquivo de Configuração YAML
+## Arquivo de Configuração
 
-O módulo lê um arquivo YAML que define os projetos DBT a serem criados. O arquivo deve estar no diretório raiz do módulo ou em um caminho relativo especificado.
+Por padrão o módulo usa **dbt_project.yml** (o mesmo arquivo do dbt). Adicione uma chave de primeiro nível `dbtbuildkit` com a lista de projetos. Também é possível usar um arquivo separado definindo `file_name = "codebuild-config.yml"`.
 
-### Estrutura Básica
+O arquivo deve estar no diretório raiz do Terraform ou em um caminho relativo (`folder_name`).
+
+### Estrutura Básica (dentro de dbt_project.yml)
 
 ```yaml
-codebuild:
+name: 'meu_projeto_dbt'
+config-version: 2
+profile: 'default'
+
+# ... demais configs do dbt ...
+
+dbtbuildkit:
   - name: projeto-exemplo
     active: true
     org: minha-org
@@ -65,7 +73,7 @@ codebuild:
 ### Campos Opcionais
 
 ```yaml
-codebuild:
+dbtbuildkit:
   - name: projeto-completo
     active: true
     org: minha-org
@@ -496,7 +504,7 @@ O módulo cria todos os projetos definidos no arquivo YAML, independente do ambi
 **Solução**: 
 1. Verifique se `active: true` no arquivo YAML
 2. Verifique se todos os campos obrigatórios estão presentes
-3. Verifique se o arquivo YAML está no caminho correto (definido em `file_name`)
+3. Verifique se o arquivo está no caminho correto (por padrão `dbt_project.yml`, ou `file_name` se customizado)
 
 ## Contribuindo
 

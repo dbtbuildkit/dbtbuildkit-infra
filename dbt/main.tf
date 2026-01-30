@@ -230,7 +230,7 @@ locals {
   config_file_exists = fileexists(local.config_file_path)
 
 
-  raw_config = local.config_file_exists ? file(local.config_file_path) : "codebuild: []"
+  raw_config = local.config_file_exists ? file(local.config_file_path) : "dbtbuildkit: []"
 
 
 
@@ -244,8 +244,9 @@ locals {
 
   codebuild_config = yamldecode(local.raw_config)
 
-
-  codebuild_list = try(local.codebuild_config.codebuild, [])
+  # Support both: dbtbuildkit as list (multiple projects) or as single object (one project in dbt_project.yml)
+  raw_codebuild   = try(local.codebuild_config.dbtbuildkit, [])
+  codebuild_list  = length(local.raw_codebuild) > 0 && try(local.raw_codebuild[0], null) != null ? local.raw_codebuild : (local.raw_codebuild != [] ? [local.raw_codebuild] : [])
 
 
   active_projects = [

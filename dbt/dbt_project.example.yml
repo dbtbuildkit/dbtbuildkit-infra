@@ -1,0 +1,48 @@
+# Exemplo de dbt_project.yml com configuração CodeBuild (DbtBuildKit)
+# O módulo dbt lê este arquivo por padrão. Adicione a chave 'dbtbuildkit' com a lista de projetos.
+# Para um único projeto no mesmo repositório, 'dbtbuildkit' pode ser um objeto (sem lista).
+
+name: 'meu_projeto_dbt'
+config-version: 2
+version: '1.0.0'
+profile: 'default'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# --- Configuração DbtBuildKit / CodeBuild ---
+# Lista de projetos CodeBuild (ou um único objeto para um projeto)
+dbtbuildkit:
+  - name: projeto-basico
+    active: true
+    org: minha-organizacao
+    repo: meu-repo-dbt
+    engine: redshift
+    commands:
+      - dbt deps
+      - dbt run
+      - dbt test
+
+  # Exemplo: um segundo projeto no mesmo arquivo (outro org/repo)
+  # - name: outro-projeto
+  #   active: true
+  #   org: outra-org
+  #   repo: outro-repo-dbt
+  #   engine: athena
+  #   commands:
+  #     - dbt build
+
+# Alternativa: um único projeto (objeto em vez de lista)
+# dbtbuildkit:
+#   name: projeto-basico
+#   active: true
+#   org: minha-organizacao
+#   repo: meu-repo-dbt
+#   engine: redshift
+#   commands:
+#     - dbt run
+#     - dbt test

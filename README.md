@@ -309,10 +309,16 @@ module "dbt_projects" {
 
 ### 5. Configure dbt Projects
 
-Create a `codebuild-config.yml` file (see complete example in `example/codebuild-config.yml`):
+Use your project's `dbt_project.yml` (or create it). Add a top-level `dbtbuildkit` key with the list of CodeBuild projects (see `dbt/dbt_project.example.yml`):
 
 ```yaml
-codebuild:
+name: 'my_dbt_project'
+config-version: 2
+profile: 'default'
+
+# ... paths and other dbt config ...
+
+dbtbuildkit:
   - name: my-dbt-project
     active: true
     org: my-org
@@ -323,6 +329,8 @@ codebuild:
       - dbt build
     s3_artifacts_bucket: "my-artifacts-bucket"
 ```
+
+Alternatively, set `file_name = "codebuild-config.yml"` in the dbt module and use a separate config file (see `example/codebuild-config.yml`).
 
 ### 6. Apply Infrastructure
 
@@ -365,7 +373,7 @@ terraform apply
 │   ├── main.tf          # Module usage example
 │   ├── backend.tf       # Backend example
 │   ├── variables.tf     # Example variables
-│   └── codebuild-config.yml  # Example configuration
+│   └── dbt_project.yml       # dbt config + dbtbuildkit section (or codebuild-config.yml)
 │
 ├── .github/workflows/   # Reusable GitHub Actions Workflows
 │   ├── setup-cicd.yml  # Automatic CI/CD infrastructure setup
@@ -635,7 +643,7 @@ jobs:
 Simple dbt project with manual execution:
 
 ```yaml
-codebuild:
+dbtbuildkit:
   - name: basic-project
     active: true
     org: my-org
@@ -652,7 +660,7 @@ codebuild:
 Project with daily scheduled execution:
 
 ```yaml
-codebuild:
+dbtbuildkit:
   - name: scheduled-project
     active: true
     org: my-org
@@ -670,7 +678,7 @@ codebuild:
 Project with all features:
 
 ```yaml
-codebuild:
+dbtbuildkit:
   - name: complete-project
     active: true
     org: my-org
@@ -712,7 +720,7 @@ codebuild:
 ```
 
 For more examples, see:
-- Complete file: `example/codebuild-config.yml`
+- dbt config with CodeBuild: `dbt/dbt_project.example.yml`; alternative: `example/codebuild-config.yml`
 - Documentation: [Examples in Documentation](https://dbtbuildkit.github.io/dbtbuildkit-infra/examples.html)
 
 ---

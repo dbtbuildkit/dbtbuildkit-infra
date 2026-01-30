@@ -241,11 +241,15 @@ Create a ``main.tf`` file:
 Step 5: Configure dbt Projects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Create a ``codebuild-config.yml`` file:
+Use your project's ``dbt_project.yml`` and add a top-level ``codebuild`` key:
 
 .. code-block:: yaml
 
-   codebuild:
+   name: 'my_dbt_project'
+   config-version: 2
+   profile: 'default'
+
+   dbtbuildkit:
      - name: my-dbt-project
        active: true
        org: my-org
@@ -276,11 +280,15 @@ After setting up the infrastructure, you can configure your first dbt project.
 Basic Configuration
 ~~~~~~~~~~~~~~~~~~~
 
-Create a ``codebuild-config.yml`` file in your repository root:
+Add a ``dbtbuildkit`` section to your ``dbt_project.yml`` in the repository root:
 
 .. code-block:: yaml
 
-   codebuild:
+   name: 'my_dbt_project'
+   config-version: 2
+   profile: 'default'
+
+   dbtbuildkit:
      - name: my-first-dbt-project
        active: true
        org: my-github-org
@@ -309,7 +317,7 @@ To schedule automatic execution, add a schedule:
 
 .. code-block:: yaml
 
-   codebuild:
+   dbtbuildkit:
      - name: scheduled-project
        active: true
        org: my-org
@@ -328,7 +336,7 @@ Configure Slack notifications:
 
 .. code-block:: yaml
 
-   codebuild:
+   dbtbuildkit:
      - name: project-with-notifications
        active: true
        org: my-org

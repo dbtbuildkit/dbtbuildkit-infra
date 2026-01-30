@@ -350,14 +350,18 @@ Configuration File Examples
    **Slack Channel Limitation**: Slack channels used for notifications must be public channels. 
    Private channels are not supported and will cause notification failures.
 
-Example 9: Basic codebuild-config.yml
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Example 9: Basic dbt_project.yml (CodeBuild section)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create a ``codebuild-config.yml`` file in your project root:
+Add a ``dbtbuildkit`` key to your ``dbt_project.yml`` in the project root:
 
 .. code-block:: yaml
 
-   codebuild:
+   name: 'my_dbt_project'
+   config-version: 2
+   profile: 'default'
+
+   dbtbuildkit:
      - name: basic-project
        active: true
        org: my-org
@@ -367,14 +371,14 @@ Create a ``codebuild-config.yml`` file in your project root:
          - dbt run
          - dbt test
 
-Example 10: Advanced codebuild-config.yml
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Example 10: Advanced dbt_project.yml (CodeBuild section)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Advanced configuration with notifications and scheduling:
 
 .. code-block:: yaml
 
-   codebuild:
+   dbtbuildkit:
      - name: advanced-project
        active: true
        org: my-org

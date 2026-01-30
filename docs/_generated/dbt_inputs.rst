@@ -58,9 +58,9 @@
      - `"events-role"`
      - no
    * - file\_name
-     - CodeBuild environment configuration file
+     - Configuration file for CodeBuild projects (dbt_project.yml or codebuild-config.yml). When using dbt_project.yml, add a top-level 'dbtbuildkit' key with a list of projects.
      - `string`
-     - `"codebuild-config.yml"`
+     - `"dbt_project.yml"`
      - no
    * - github\_branch
      - GitHub repository branch to use (e.g.: main, develop)
